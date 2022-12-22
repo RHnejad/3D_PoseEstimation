@@ -1,4 +1,34 @@
 
+import numpy as np
+import matplotlib.pyplot as plt
+
+import torch
+import torch.nn as nn
+from torch.optim import Adam
+from torch.nn import CrossEntropyLoss
+from torch.utils.data import DataLoader, Dataset
+
+from tqdm import tqdm
+
+run_num = 10
+zero_centre = True
+sample = True
+Samples = np.random.randint(0,389938,200) #389938+135836=525774
+
+num_cameras = 1
+input_dimension = num_cameras*2
+output_dimension = 3
+
+num_of_joints = 16 #data = np.insert(data, 0 , values= [0,0,0], axis=0 )
+
+IZAR = True
+
+path_positions_2d_VD3d ="/Users/rh/test_dir/h3.6/VideoPose3D/data/npz/data_2d_h36m_gt.npz"
+path_positions_3d_VD3d ="/Users/rh/test_dir/h3.6/VideoPose3D/data/npz/data_3d_h36m.npz"
+subjects = ['S1', 'S5', 'S6', 'S7', 'S8', 'S9', 'S11'] #training: 1,5,6,7,8 #eval: 9,11
+KeyPoints_17_from3d = [0,1,2,3,6,7,8,12,13,14,15,17,18,19,25,26,27]
+KeyPoints_from3d_to_delete = [4,5,9,10,11,16,20,21,22,23,24,28,29,30,31] if num_of_joints==17 else [0,4,5,9,10,11,16,20,21,22,23,24,28,29,30,31]
+
 
 
 
