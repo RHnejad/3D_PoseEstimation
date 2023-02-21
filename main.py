@@ -21,7 +21,7 @@ from utils import camera_parameters
 
 
 act = ""
-run_num = "Feb21_"
+run_num = "Feb21_longrun"
 zero_centre = False
 standardize_3d = False
 
@@ -116,10 +116,12 @@ def read_data(subjects = subjects, action = "", is_train=True):
                 # print(action)
                 for frame in range(len(data_file_3d[s][a])):
 
-                    tmp = data_file_3d[s][a][frame]
-                    tmp = tmp[ KeyPoints_from3d ,:] #only keeping the 16 or 17 keypoints we want
+                    global_pose = data_file_3d[s][a][frame]
+                    global_pose = global_pose[ KeyPoints_from3d ,:] #only keeping the 16 or 17 keypoints we want
 
                     for c in range(1+3*int(AllCameras)) :
+
+                        tmp = global_pose.copy()
 
                         if CameraView:
                             for j in range(len(tmp)):
@@ -128,102 +130,14 @@ def read_data(subjects = subjects, action = "", is_train=True):
                                     
                         all_in_one_dataset_3d[i] = tmp
 
-                        tmp = data_file_2d[s][a+cam_ids[c]][frame]
-                        all_in_one_dataset_2d[i] = tmp[ KeyPoints_from3d ,:] #only keeping the 16 or 17 keypoints we want
+                        tmp2 = data_file_2d[s][a+cam_ids[c]][frame]
+                        all_in_one_dataset_2d[i] = tmp2[ KeyPoints_from3d ,:] #only keeping the 16 or 17 keypoints we want
 
                         i = i + 1 
     
 
     return all_in_one_dataset_2d, all_in_one_dataset_3d 
 
-def process_data(dataset , action = "",sample=sample, is_train = True, standardize = False, z_c = zero_centre) :
-
-
-    # print("+",dataset.shape)
-    n_frames, n_joints, dim = dataset.shape
-
-    if zero_centre:
-        for i in range(n_frames):
-            dataset[i,1:] = dataset[i,1:] - dataset[i,0]
-
-
-    if is_train :
-        data_sum = np.sum(dataset, axis=0)
-        data_mean = np.divide(data_sum, n_frames)
-
-
-        diff_sq2_sum =np.zeros((n_joints,dim))
-        for i in range(n_frames):
-            diff_sq2_sum += np.power( dataset[i]-data_mean ,2)
-        data_std = np.divide(diff_sq2_sum, n_frames)
-        data_std = np.sqrt(data_std)
-
-        
-
-        if dim == 2:
-            with open("mean_train_2d.npy","wb") as f:
-                np.save(f, data_mean)
-            with open("std_train_2d.npy","wb") as f:
-                np.save(f, data_std)  
-            # global mean_train_2d 
-            # mean_train_2d = data_mean
-            # global std_train_2d
-            # std_train_2d = data_std
-        elif dim == 3:
-            with open("mean_train_3d.npy","wb") as f:
-                np.save(f, data_mean)  
-            with open("std_train_3d.npy","wb") as f:
-                np.save(f, data_std)  
-            # global mean_train_3d 
-            # mean_train_3d = data_mean 
-            # global std_train_3d
-            # std_train_3d = data_std
-
-    if dim == 2:
-        with open("mean_train_2d.npy","rb") as f:
-            mean_train_2d = np.load(f)
-        with open("std_train_2d.npy","rb") as f:
-           std_train_2d = np.load(f)  
-    elif dim == 3:
-        with open("mean_train_3d.npy","rb") as f:
-            mean_train_3d =np.load(f)  
-        with open("std_train_3d.npy","rb") as f:
-            std_train_3d = np.load(f)  
-
-
-    if standardize :
-        if dim == 2 :
-            for i in range(n_frames):
-                if Normalize:
-                    max_dataset, min_dataset = np.max(dataset, axis=0), np.min(dataset, axis=0)
-                    dataset[i] = np.divide(2*dataset[i], (max_dataset-min_dataset))
-                    dataset[i] = dataset[i] - np.divide(min_dataset, (max_dataset-min_dataset))
-                else:
-                    dataset[i] = np.divide(dataset[i] - mean_train_2d, std_train_2d)
-        elif dim == 3:
-            for i in range(n_frames):
-                dataset[i] = np.divide(dataset[i] - mean_train_3d, std_train_3d)
-
-
-    if num_of_joints == 16: #Should through an error if num of joints is 16 but zero centre is false
-        # dataset = np.delete (dataset, 0 , axis=1)
-        temp2 = dataset[:, 1:, :]
-        # print("temp.shape",temp2.shape)
-        dataset = temp2
-    elif zero_centre :
-        dataset [:,:1,:] *= 0
-
-    # print(sample)
-
-    if dim == 2 and sample :
-        dataset = dataset.reshape((int(n_frames/4),4, num_of_joints,2))
-
-    dataset = dataset[Samples] if sample else dataset
-
-    if dim == 2 and sample :
-        dataset = dataset.reshape(-1, num_of_joints,2)  
-
-    return dataset
 
 #_________
 
@@ -322,8 +236,8 @@ class Pose_KeyPoints(Dataset):
     def __init__(self, num_cams = 1, subjectp=subjects , transform=None, target_transform=None, is_train = True):
 
         self.dataset2d, self.dataset3d = read_data(subjects,"",is_train)
-        self.dataset2d = process_data(self.dataset2d,  sample = False if len(subjectp)==2 else sample, is_train = is_train, action= act,standardize=standardize_2d, z_c = False)
-        self.dataset3d = process_data(self.dataset3d,  sample = False if len(subjectp)==2 else sample, is_train = is_train, action= act,standardize=standardize_2d, z_c = True)
+        self.dataset2d = self.process_data(self.dataset2d,  sample = False if len(subjectp)==2 else sample, is_train = is_train, action= act,standardize=standardize_2d, z_c = False)
+        self.dataset3d = self.process_data(self.dataset3d,  sample = False if len(subjectp)==2 else sample, is_train = is_train, action= act,standardize=standardize_2d, z_c = True)
 
         self.transform = transform
         self.target_transform = target_transform
@@ -341,6 +255,94 @@ class Pose_KeyPoints(Dataset):
         noise = noise * 0
         
         return self.dataset2d[idx].reshape(-1 ,2), self.dataset3d[idx] #cam 0 
+
+        
+    def process_data(self, dataset , action = "",sample=sample, is_train = True, standardize = False, z_c = zero_centre) :
+
+
+        # print("+",dataset.shape)
+        n_frames, n_joints, dim = dataset.shape
+
+        if z_c:
+            for i in range(n_frames):
+                dataset[i,1:] = dataset[i,1:] - dataset[i,0]
+
+
+        if is_train :
+            data_sum = np.sum(dataset, axis=0)
+            data_mean = np.divide(data_sum, n_frames)
+
+
+            diff_sq2_sum =np.zeros((n_joints,dim))
+            for i in range(n_frames):
+                diff_sq2_sum += np.power( dataset[i]-data_mean ,2)
+            data_std = np.divide(diff_sq2_sum, n_frames)
+            data_std = np.sqrt(data_std)
+
+            
+
+            if dim == 2:
+                with open("mean_train_2d.npy","wb") as f:
+                    np.save(f, data_mean)
+                with open("std_train_2d.npy","wb") as f:
+                    np.save(f, data_std)  
+                # global mean_train_2d 
+                # mean_train_2d = data_mean
+                # global std_train_2d
+                # std_train_2d = data_std
+            elif dim == 3:
+                with open("mean_train_3d.npy","wb") as f:
+                    np.save(f, data_mean)  
+                with open("std_train_3d.npy","wb") as f:
+                    np.save(f, data_std)  
+                # global mean_train_3d 
+                # mean_train_3d = data_mean 
+                # global std_train_3d
+                # std_train_3d = data_std
+
+        if dim == 2:
+            with open("mean_train_2d.npy","rb") as f:
+                mean_train_2d = np.load(f)
+            with open("std_train_2d.npy","rb") as f:
+                std_train_2d = np.load(f)  
+        elif dim == 3:
+            with open("mean_train_3d.npy","rb") as f:
+                mean_train_3d =np.load(f)  
+            with open("std_train_3d.npy","rb") as f:
+                std_train_3d = np.load(f)  
+
+
+        if standardize :
+            if dim == 2 :
+                for i in range(n_frames):
+                    if Normalize:
+                        max_dataset, min_dataset = np.max(dataset, axis=0), np.min(dataset, axis=0)
+                        dataset[i] = np.divide(2*dataset[i], (max_dataset-min_dataset))
+                        dataset[i] = dataset[i] - np.divide(min_dataset, (max_dataset-min_dataset))
+                    else:
+                        dataset[i] = np.divide(dataset[i] - mean_train_2d, std_train_2d)
+            elif dim == 3:
+                for i in range(n_frames):
+                    dataset[i] = np.divide(dataset[i] - mean_train_3d, std_train_3d)
+
+
+        if num_of_joints == 16: #Should through an error if num of joints is 16 but zero centre is false
+            # dataset = np.delete (dataset, 0 , axis=1)
+            dataset = dataset[:, 1:, :].copy()
+        elif z_c :
+            dataset [:,:1,:] *= 0
+
+        # print(sample)
+
+        if dim == 2 and sample :
+            dataset = dataset.reshape((int(n_frames/4),4, num_of_joints,2))
+
+        dataset = dataset[Samples] if sample else dataset
+
+        if dim == 2 and sample :
+            dataset = dataset.reshape(-1, num_of_joints,2)  
+
+        return dataset
 
 
 
@@ -364,7 +366,7 @@ def main():
     training_set = Pose_KeyPoints(num_cams=num_cameras, subjectp=subjects[0:5], is_train = True) 
     test_set     = Pose_KeyPoints(num_cams=num_cameras, subjectp=subjects[5:7] , is_train = False)
 
-    batch_size=64
+    batch_size=32
 
     train_loader = DataLoader( training_set, shuffle=True, batch_size=batch_size, num_workers= 4)
     test_loader = DataLoader(test_set, shuffle=True, batch_size=batch_size, num_workers=4)
@@ -382,10 +384,10 @@ def main():
     # model = MyViT((1,num_of_joints*num_cameras,2),n_blocks=2 , hidden_d=8, n_heads=1, out_d=(num_of_joints*output_dimension)).to(device)   #, n_patches=7, n_blocks=2, 
     # model = TransformerAE(2*num_cams, 3, 0.2).to(device)
     # model = AE(input_dimension, output_dimension, n_joints= num_of_joints).to(device)
-    model = LinearModel(i_dim=num_of_joints*input_dimension, o_dim=num_of_joints*output_dimension,p_dropout=0.4, linear_size=1024).to(device)
+    model = LinearModel(i_dim=num_of_joints*input_dimension, o_dim=num_of_joints*output_dimension,p_dropout=0.5, linear_size=1024).to(device)
     model.apply(weight_init)
 
-    n_epochs=10
+    n_epochs=100
     lr = 0.001
 
     #Traning loop
