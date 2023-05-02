@@ -30,8 +30,9 @@ def visualize_3d(keypoints,keypoints2, name="3d"):
     ax.axes.set_xlim3d(left=-1, right=1) 
     ax.axes.set_ylim3d(bottom=-1, top=1) 
     ax.axes.set_zlim3d(bottom=-1 , top=1 ) 
+    plt.savefig(name)
     # plt.savefig("./"+run_num+"/"+name +'.png')
-    plt.show()
+    # plt.show()
 
 
 def plot_heat_map(data):
@@ -221,3 +222,30 @@ def qv_mult(q1, v1):
     # q2 = (0.0,) + v1
     q2 = np.insert(v1,0,0) #new
     return q_mult(q_mult(q1, q2), q_conjugate(q1))[1:]
+
+
+
+def plot_losses(epoch_losses,epoch_eval_loss,epoch_metric,epoch_eval_metric, run_name) :
+
+    plt.figure()
+    plt.subplot(1, 2, 1)
+
+    plt.plot(epoch_losses)
+    plt.plot(epoch_eval_loss)
+
+    plt.xlabel("epoch")
+    plt.ylabel("MSE")
+
+    plt.legend(["training","test"])
+
+    plt.subplot(1, 2, 2)
+    plt.plot(epoch_metric)
+    plt.plot(epoch_eval_metric)
+
+    plt.xlabel("epoch")
+    plt.ylabel("MPJPE")
+
+    plt.legend(["training","test"])
+    
+    plt.savefig("./"+run_name+"/plot_metric.pdf")
+    plt.show()

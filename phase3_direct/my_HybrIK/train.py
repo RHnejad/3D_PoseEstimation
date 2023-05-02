@@ -5,6 +5,8 @@ import cv2
 from torch.utils.data import DataLoader
 from H36_dataset import *
 from tqdm import tqdm
+import os
+from utils import visualize_3d, plot_losses
 
 def loss_MPJPE(prediction, target):
     B,J,d =  target.shape
@@ -13,13 +15,7 @@ def loss_MPJPE(prediction, target):
     return metric
 
 
-if __name__ == "__main__":
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print("DEVICE:",device)
-    batch_size = 64
-    n_epochs=20
-    lr = 0.001
-    
+def train(batch_size,n_epochs,lr,device,run_name):
     training_set = H36_dataset(num_cams=num_cameras, subjectp=subjects[0:1], is_train = True) 
     test_set     = H36_dataset(num_cams=num_cameras, subjectp=subjects[0:1] , is_train = False)
     
@@ -31,10 +27,15 @@ if __name__ == "__main__":
         mean_train_3d =np.load(f)  
     with open("std_train_3d.npy","rb") as f:
         std_train_3d = np.load(f)  
+        
     with open("max_train_3d.npy","rb") as f:
-        max_train_3d = torch.from_numpy(np.load(f)).to(device)  
+        max_train_3d = torch.from_numpy(np.load(f)).to(device) 
+        if zero_centre and num_of_joints==17:
+            max_train_3d[:1,:]*=0 
     with open("min_train_3d.npy","rb") as f:
-        min_train_3d = torch.from_numpy(np.load(f)).to(device)   
+        min_train_3d = torch.from_numpy(np.load(f)).to(device)
+        if zero_centre and num_of_joints==17:  
+            min_train_3d[:1,:]*=0 
 
     mean_k = mean_train_3d [list(range(17-num_of_joints,17)),:]
     std_k = std_train_3d [list(range(17-num_of_joints,17)),:]    
@@ -94,5 +95,33 @@ if __name__ == "__main__":
         train_metric = torch.mean(train_metric)
             
         lr_schdlr.step(loss)
+        
+        epoch_losses.append(train_loss)
+        epoch_metric.append(train_metric.cpu().item() )
                 
         print(f"epoch {epoch+1}/{n_epochs} loss(train): {train_loss:.4f} , MPJPE(train):{train_metric.cpu().item()}") 
+        
+    y = y.cpu().detach().numpy().reshape(-1, num_of_joints,output_dimension)
+    y_hat = y_hat.cpu().detach().numpy().reshape(-1, num_of_joints,output_dimension)
+    visualize_3d(y[0],y_hat[0],   "./"+str(run_name)+"/3d_train_a.png")
+    visualize_3d(y[-1],y_hat[-1], "./"+str(run_name)+"/3d_train_b.png")     
+    
+    
+    plot_losses(epoch_losses,epoch_eval_loss,epoch_metric,epoch_eval_metric, run_name)
+    
+    return model_direct
+
+if __name__ == "__main__":
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print("DEVICE:",device)
+    batch_size = 64
+    n_epochs= 20
+    lr = 0.005 #0.001
+    run_name = "test_s1_all"
+    
+    if not os.path.exists(run_name):
+        os.mkdir(run_name)
+    
+    train(batch_size,n_epochs,lr,device,run_name)
+    
+

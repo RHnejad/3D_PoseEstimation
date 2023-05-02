@@ -6,7 +6,7 @@ from utils import camera_parameters, qv_mult
 import cv2
 
 systm = "vita17"  #izar,vita17,laptop
-act = "Walking"
+act = "" #"Walking"
 load_imgs = True
 from_videos = False
 
@@ -47,11 +47,11 @@ KeyPoints_from3d_to_delete = [4,5,9,10,11,16,20,21,22,23,24,28,29,30,31]
 
 
 class H36_dataset(Dataset):
-    def __init__(self, num_cams = 1, subjectp=subjects , transform=None, target_transform=None, is_train = True):
+    def __init__(self, num_cams = 1, subjectp=subjects , action=act, transform=None, target_transform=None, is_train = True):
         
         self.cam_ids = [".54138969", ".55011271", ".58860488",  ".60457274", ]
 
-        self.dataset2d, self.dataset3d, self.video_and_frame_paths = self.read_data(subjects= subjectp,action=act,is_train = is_train)
+        self.dataset2d, self.dataset3d, self.video_and_frame_paths = self.read_data(subjects= subjectp,action=action,is_train = is_train)
         self.dataset2d = self.process_data(self.dataset2d,  sample = False if len(subjectp)==2 else sample, is_train = is_train, standardize=standardize_2d, z_c = False)
         self.dataset3d = self.process_data(self.dataset3d,  sample = False if len(subjectp)==2 else sample, is_train = is_train, standardize=standardize_3d, z_c = True)
 
@@ -169,8 +169,7 @@ class H36_dataset(Dataset):
                         dataset[i] = np.divide(dataset[i] - mean_train_3d, std_train_3d)
 
 
-        if num_of_joints == 16: #Should through an error if num of joints is 16 but zero centre is false
-        
+        if num_of_joints == 16: #Should through an error if num of joints is 16 but zero centre is false    
             dataset = dataset[:, 1:, :].copy()
         elif z_c :
             dataset [:,:1,:] *= 0
