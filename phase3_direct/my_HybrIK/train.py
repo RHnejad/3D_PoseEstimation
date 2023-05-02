@@ -16,8 +16,8 @@ def loss_MPJPE(prediction, target):
 
 
 def train(batch_size,n_epochs,lr,device,run_name):
-    training_set = H36_dataset(num_cams=num_cameras, subjectp=subjects[0:1], is_train = True) 
-    test_set     = H36_dataset(num_cams=num_cameras, subjectp=subjects[0:1] , is_train = False)
+    training_set = H36_dataset(num_cams=num_cameras, subjectp=subjects[0:2], is_train = True) 
+    test_set     = H36_dataset(num_cams=num_cameras, subjectp=subjects[2:3] , is_train = False)
     
     train_loader = DataLoader( training_set, shuffle=True, batch_size=batch_size, num_workers= 1)
     test_loader = DataLoader(test_set, shuffle=True, batch_size=batch_size, num_workers=1)
@@ -49,8 +49,8 @@ def train(batch_size,n_epochs,lr,device,run_name):
     
     epoch_losses = list()
     epoch_metric = list()
-    epoch_eval_loss = list()
-    epoch_eval_metric = list()
+    epoch_val_loss = list()
+    epoch_val_metric = list()
     
 
     for epoch in tqdm(range(n_epochs),desc="Training"):
@@ -65,11 +65,12 @@ def train(batch_size,n_epochs,lr,device,run_name):
 
             x, y, frame  = batch
             
-            x, y = x.to(device), y.to(device)
             x,y=x.float(),y.float()
+            x, y = x.to(device), y.to(device)
             
-            frame =frame.to(device)
             frame = frame.float()
+            frame =frame.to(device)
+            
             y_hat = model_direct(frame)
                   
             y_hat = y_hat.reshape(-1,num_of_joints,output_dimension)
@@ -92,22 +93,65 @@ def train(batch_size,n_epochs,lr,device,run_name):
             train_loss += loss.cpu().item() / len(train_loader)
             train_metric += loss_MPJPE(y_hat, y)/ len(training_set)
             
+            
         train_metric = torch.mean(train_metric)
             
         lr_schdlr.step(loss)
         
         epoch_losses.append(train_loss)
         epoch_metric.append(train_metric.cpu().item() )
+        
+        
+        #________________validation_______________________  
+        with torch.no_grad():
+            model_direct.eval()
+            val_loss = 0.0
+            val_metric = torch.zeros(num_of_joints).to(device)
+            
+            for x_v, y_v, frame_v  in test_loader:
                 
-        print(f"epoch {epoch+1}/{n_epochs} loss(train): {train_loss:.4f} , MPJPE(train):{train_metric.cpu().item()}") 
+                x_v,y_v=x_v.float(),y_v.float()
+                x_v, y_v = x_v.to(device), y_v.to(device)
+                
+                frame_v = frame_v.float()
+                frame_v =frame_v.to(device)
+                
+                y_hat_v = model_direct(frame_v)
+                    
+                y_hat_v = y_hat_v.reshape(-1,num_of_joints,output_dimension)
+                
+                loss_v = loss_function(y_hat_v, y_v) 
+                
+            
+                if standardize_3d :
+                    if Normalize:
+                        y_v = torch.mul(y_v , max_train_3d-min_train_3d ) + min_train_3d 
+                        y_hat_v = torch.mul(y_hat_v,  max_train_3d-min_train_3d ) + min_train_3d 
+                    else:
+                        y_v = torch.mul(y_v , temp_std ) + temp_mean #DeStandardize
+                        y_hat_v = torch.mul(y_hat_v, temp_std ) + temp_mean   
+                    
+                    
+                metric_v = loss_MPJPE(y_hat_v, y_v) 
+            
+                val_loss += loss_v.cpu().item() / len(test_loader)
+                val_metric += (metric_v / len(test_set))
+            
+        val_metric = torch.mean(val_metric)
+        
+        epoch_val_loss.append(val_loss)
+        epoch_val_metric.append(val_metric.cpu().item() )
+            
+        #__  
+                
+        print(f"epoch {epoch+1}/{n_epochs} loss(train): {train_loss:.4f} , MPJPE(train):{train_metric.cpu().item()}, loss(val.): {val_loss}, MPJPE(val.){val_metric.cpu().item()}") 
         
     y = y.cpu().detach().numpy().reshape(-1, num_of_joints,output_dimension)
     y_hat = y_hat.cpu().detach().numpy().reshape(-1, num_of_joints,output_dimension)
     visualize_3d(y[0],y_hat[0],   "./"+str(run_name)+"/3d_train_a.png")
     visualize_3d(y[-1],y_hat[-1], "./"+str(run_name)+"/3d_train_b.png")     
     
-    
-    plot_losses(epoch_losses,epoch_eval_loss,epoch_metric,epoch_eval_metric, run_name)
+    plot_losses(epoch_losses,epoch_val_loss,epoch_metric,epoch_val_metric, run_name)
     
     return model_direct
 
@@ -115,13 +159,12 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("DEVICE:",device)
     batch_size = 64
-    n_epochs= 20
-    lr = 0.005 #0.001
-    run_name = "test_s1_all"
+    n_epochs= 10
+    lr = 0.01 #0.001
+    run_name = "test_s1_val"
     
     if not os.path.exists(run_name):
         os.mkdir(run_name)
     
     train(batch_size,n_epochs,lr,device,run_name)
     
-
