@@ -5,14 +5,13 @@ from torch.utils.data import Dataset
 from utils import camera_parameters, qv_mult
 import cv2
 
-systm = "laptop"  #izar,vita17,laptop
+systm = "vita17"  #izar,vita17,laptop
 act = "Walking"
 load_imgs = True
 from_videos = False
 
 zero_centre = True
 standardize_3d = True
-
 standardize_2d = False
 Normalize = True
 
@@ -79,15 +78,15 @@ class H36_dataset(Dataset):
                 self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
             else :
                 self.frame = cv2.imread(self.video_and_frame_paths[idx][0])
-                print("***",self.video_and_frame_paths[idx][0], self.frame ,"***")
+                # print("***",self.video_and_frame_paths[idx][0], self.frame ,"***")
                 self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
 
             
-        else :
-            keypoints_2d = self.dataset2d[idx].reshape(-1 ,2)
+        keypoints_2d = self.dataset2d[idx].reshape(-1 ,2)
 
         #resising the image for Resnet
         self.frame = cv2.resize(self.frame, (256, 256))
+        self.frame = self.frame/256.0
 
         return keypoints_2d, self.dataset3d[idx], self.frame #cam 0 
 
@@ -119,11 +118,17 @@ class H36_dataset(Dataset):
                 with open("std_train_2d.npy","wb") as f:
                     np.save(f, data_std)  
 
+
             elif dim == 3:
                 with open("mean_train_3d.npy","wb") as f:
                     np.save(f, data_mean)  
                 with open("std_train_3d.npy","wb") as f:
                     np.save(f, data_std)  
+                    
+                with open("max_train_3d.npy","wb") as f:
+                    np.save(f, np.max(dataset, axis=0))  
+                with open("min_train_3d.npy","wb") as f:
+                    np.save(f, np.min(dataset, axis=0)) 
 
 
         if dim == 2:
@@ -136,6 +141,11 @@ class H36_dataset(Dataset):
                 mean_train_3d =np.load(f)  
             with open("std_train_3d.npy","rb") as f:
                 std_train_3d = np.load(f)  
+                
+            with open("max_train_3d.npy","rb") as f:
+                max_train_3d =np.load(f)  
+            with open("min_train_3d.npy","rb") as f:
+                min_train_3d = np.load(f)  
 
 
         if standardize :
@@ -152,7 +162,11 @@ class H36_dataset(Dataset):
                         dataset[i] = np.divide(dataset[i] - mean_train_2d, std_train_2d)
             elif dim == 3:
                 for i in range(n_frames):
-                    dataset[i] = np.divide(dataset[i] - mean_train_3d, std_train_3d)
+                    if Normalize:
+                        # max_dataset, min_dataset = np.max(dataset, axis=0), np.min(dataset, axis=0)
+                        dataset[i] = np.divide(dataset[i]- min_train_3d, (max_train_3d-min_train_3d))
+                    else:
+                        dataset[i] = np.divide(dataset[i] - mean_train_3d, std_train_3d)
 
 
         if num_of_joints == 16: #Should through an error if num of joints is 16 but zero centre is false

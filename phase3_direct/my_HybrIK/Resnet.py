@@ -56,7 +56,6 @@ class Bottleneck(nn.Module):
         super(Bottleneck, self).__init__()
         self.dcn = dcn
         self.with_dcn = dcn is not None
-
         self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False)
         self.bn1 = norm_layer(planes, momentum=0.1)
         self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride,

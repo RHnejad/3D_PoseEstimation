@@ -1,6 +1,7 @@
 import torch 
 import torch.nn as nn
 from torch.nn import functional as F
+import torch.cuda.comm
 
 from Resnet import ResNet
 from utils import visualize_3d,plot_heat_map
@@ -83,11 +84,12 @@ class Model_3D(nn.Module):
     
         batch_size = x.shape[0]
     
+        #new
+        x = torch.permute(x, (0,3,1,2))
+    
         x0 = self.preact(x)
         out = self.deconv_layers(x0)
         out = self.final_layer(out)
-        
-        print(out.shape)
          
         out = out.reshape((out.shape[0], self.num_joints, -1))
         out = self.norm_heatmap(self.norm_type, out)
@@ -103,9 +105,7 @@ class Model_3D(nn.Module):
         hm_y = heatmaps.sum((2, 4))
         hm_z = heatmaps.sum((3, 4))
         
-        
-        print("+++++++",hm_z.shape)
-        
+ 
         if torch.cuda.is_available():
             hm_x = hm_x * torch.cuda.comm.broadcast(torch.arange(hm_x.shape[-1]).type(
                 torch.cuda.FloatTensor), devices=[hm_x.device.index])[0]
@@ -117,8 +117,7 @@ class Model_3D(nn.Module):
             hm_x = hm_x * torch.arange(hm_x.shape[-1]).type(torch.FloatTensor)
             hm_y = hm_y * torch.arange(hm_y.shape[-1]).type(torch.FloatTensor)
             hm_z = hm_z * torch.arange(hm_z.shape[-1]).type(torch.FloatTensor)
-            
-        print(hm_z.shape,hm_z )    
+              
             
         coord_x = hm_x.sum(dim=2, keepdim=True)
         coord_y = hm_y.sum(dim=2, keepdim=True)
@@ -133,14 +132,9 @@ class Model_3D(nn.Module):
 
         pred_uvd_jts_29_flat = pred_uvd_jts_29.reshape((batch_size, self.num_joints * 3)) 
         
-        # print("****",coord_x, coord_y, coord_z)
-        combined_tensor = torch.cat((coord_x, coord_y, coord_z), dim=-1)
-        numpy_array = combined_tensor.detach().cpu().numpy().reshape(17, 3)
-        # print("****",coord_x.shape, numpy_array)
-
         # visualize_3d(numpy_array.copy(), numpy_array)
         
-        return out
+        return pred_uvd_jts_29_flat
     
     
     

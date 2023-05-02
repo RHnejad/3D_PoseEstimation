@@ -53,11 +53,18 @@ if __name__ == "__main__":
     x = generate_image()
     
     d2d, d3d, frame = training_set.__getitem__(300)
+    
+    print(frame.shape)
+    # frame =  torch.from_numpy(frame.transpose((2, 0, 1))).float() / 255.0
+    frame =  torch.from_numpy(frame)
+    frame = frame.unsqueeze(0)
+    print(frame.shape)
+    # breakpoint()
 
     model= Model_3D()
      
-    y= model(x)
+    # y= model(x)
     y2 = model(frame)
     
-    print(x.shape,y.shape)
+    # print(x.shape,y.shape)
     print(frame.shape,y2.shape)
