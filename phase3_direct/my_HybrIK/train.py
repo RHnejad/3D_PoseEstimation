@@ -7,6 +7,7 @@ from H36_dataset import *
 from tqdm import tqdm
 import os
 from utils import visualize_3d, plot_losses
+import wandb
 
 def loss_MPJPE(prediction, target):
     B,J,d =  target.shape
@@ -16,8 +17,8 @@ def loss_MPJPE(prediction, target):
 
 
 def train(batch_size,n_epochs,lr,device,run_name):
-    training_set = H36_dataset(num_cams=num_cameras, subjectp=subjects[0:2], is_train = True) 
-    test_set     = H36_dataset(num_cams=num_cameras, subjectp=subjects[2:3] , is_train = False)
+    training_set = H36_dataset(num_cams=num_cameras, subjectp=subjects[0:5], is_train = True) 
+    test_set     = H36_dataset(num_cams=num_cameras, subjectp=subjects[5:7] , is_train = False)
     
     train_loader = DataLoader( training_set, shuffle=True, batch_size=batch_size, num_workers= 1)
     test_loader = DataLoader(test_set, shuffle=True, batch_size=batch_size, num_workers=1)
@@ -143,7 +144,14 @@ def train(batch_size,n_epochs,lr,device,run_name):
         epoch_val_metric.append(val_metric.cpu().item() )
             
         #__  
-                
+        # data = [[x, y] for (x, y) in zip([epoch,epoch], train_loss)]
+        
+        # loss_table = wandb.Table(data=[[train_loss],[val_loss]])
+        # metric_table = wandb.Table(data=[[train_metric],[val_metric]])
+        # wandb.log({"loss": wandb.plot.line(loss_table), "MPJPE":wandb.plot.line(metric_table)})   
+                   
+        wandb.log({"loss(train)": train_loss, "loss(val.)": val_loss,"MPJPE(train)":train_metric.cpu().item() , " MPJPE(val.)":val_metric.cpu().item()})   
+           
         print(f"epoch {epoch+1}/{n_epochs} loss(train): {train_loss:.4f} , MPJPE(train):{train_metric.cpu().item()}, loss(val.): {val_loss}, MPJPE(val.){val_metric.cpu().item()}") 
         
     y = y.cpu().detach().numpy().reshape(-1, num_of_joints,output_dimension)
@@ -159,12 +167,17 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("DEVICE:",device)
     batch_size = 64
-    n_epochs= 10
-    lr = 0.01 #0.001
-    run_name = "test_s1_val"
+    n_epochs= 40
+    lr = 0.005 #0.001
+    run_name = "test_all_may3"
     
-    if not os.path.exists(run_name):
-        os.mkdir(run_name)
+    if not os.path.exists("./logs/visualizations/"+run_name):
+        os.mkdir(os.path.join("./logs/visualizations/", run_name))
+        
+    wandb.init(project="Direct_3D_Pose",name=run_name, config={"learning_rate": lr, "architecture": "CNN","dataset": "H3.6","epochs": 30,})
     
-    train(batch_size,n_epochs,lr,device,run_name)
+    model = train(batch_size,n_epochs,lr,device,run_name)
+    torch.save(model.state_dict(),"./logs/")
+    
+    wandb.finish()
     

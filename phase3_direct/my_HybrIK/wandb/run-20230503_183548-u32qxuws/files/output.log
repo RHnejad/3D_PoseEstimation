@@ -1,0 +1,1290 @@
+S1 Phoning 1 2636
+S1 SittingDown 2742
+S1 Phoning 2266
+S1 Photo 1036
+S1 Greeting 1149
+S1 Purchases 1158
+S1 Waiting 1792
+S1 Walking 1 3476
+S1 WalkTogether 1231
+S1 WalkTogether 1 1275
+S1 SittingDown 2 3023
+S1 Directions 1 1383
+S1 Walking 3134
+S1 Eating 2721
+S1 WalkDog 1 1662
+S1 Discussion 3852
+S1 Greeting 1 1265
+S1 Eating 2 2357
+S1 Smoking 1 2611
+S1 Discussion 1 3805
+S1 Purchases 1 1064
+S1 Waiting 1 1440
+S1 Photo 1 1074
+S1 Sitting 1 3304
+S1 Posing 992
+S1 WalkDog 1777
+S1 Directions 1612
+S1 Sitting 2 2612
+S1 Posing 1 1167
+S1 Smoking 2478
+S5 Phoning 1 3277
+S5 SittingDown 5203
+S5 Photo 2 2782
+S5 Phoning 2085
+S5 Purchases 3124
+S5 WalkDog 1 1937
+S5 SittingDown 1 3926
+S5 Walking 1 3000
+S5 Directions 2 2067
+S5 WalkTogether 2984
+S5 Sitting 3878
+S5 WalkTogether 1 3016
+S5 Photo 3325
+S5 Directions 1 4973
+S5 Walking 2521
+S5 Greeting 2 3199
+S5 Eating 2331
+S5 Eating 1 3276
+S5 Greeting 1 1474
+S5 Smoking 1 3201
+S5 Purchases 1 2479
+S5 Waiting 2 4856
+S5 Discussion 2 6090
+S5 Waiting 1 4517
+S5 Discussion 3 5935
+S5 Sitting 1 3937
+S5 Posing 1885
+S5 WalkDog 2135
+S5 Posing 1 2245
+S5 Smoking 3421
+S6 Phoning 1 2379
+S6 Photo 1 1775
+S6 SittingDown 1594
+S6 Phoning 2086
+S6 Greeting 1621
+S6 Purchases 1382
+S6 WalkDog 1 1996
+S6 Waiting 2054
+S6 SittingDown 1 1873
+S6 Walking 1 2750
+S6 WalkTogether 1590
+S6 WalkTogether 1 1629
+S6 Photo 1672
+S6 Directions 1 2843
+S6 Walking 3614
+S6 Eating 1 2010
+S6 Discussion 2415
+S6 Greeting 1 1980
+S6 Eating 2 2226
+S6 Smoking 1 2899
+S6 Discussion 1 2720
+S6 Purchases 1 1332
+S6 Waiting 3 2305
+S6 Sitting 1 1817
+S6 Posing 1161
+S6 Posing 2 1159
+S6 WalkDog 1594
+S6 Directions 2819
+S6 Sitting 2 1998
+S6 Smoking 3173
+S7 Photo 1 1877
+S7 SittingDown 4549
+S7 Phoning 2 4354
+S7 Phoning 3586
+S7 Greeting 2161
+S7 Purchases 1527
+S7 WalkDog 1 2641
+S7 SittingDown 1 6343
+S7 Walking 1 3636
+S7 WalkTogether 2871
+S7 Sitting 2826
+S7 WalkTogether 1 2379
+S7 Photo 2155
+S7 Walking 2 3623
+S7 Directions 1 2549
+S7 Eating 3171
+S7 Eating 1 3763
+S7 Discussion 5470
+S7 Greeting 1 2215
+S7 Smoking 1 4395
+S7 Discussion 1 5415
+S7 Purchases 1 1237
+S7 Waiting 2 4332
+S7 Waiting 1 4201
+S7 Sitting 1 4533
+S7 Posing 2920
+S7 WalkDog 2732
+S7 Directions 2949
+S7 Posing 1 2341
+S7 Smoking 4870
+S8 Phoning 1 2970
+S8 Photo 1 1616
+S8 SittingDown 1501
+S8 Phoning 3319
+S8 Greeting 1447
+S8 Purchases 1193
+S8 WalkDog 1 1735
+S8 Waiting 1715
+S8 SittingDown 1 1554
+S8 Walking 1 3737
+S8 Sitting 2140
+S8 WalkTogether 1 2359
+S8 Photo 1700
+S8 Directions 1 2011
+S8 Walking 3695
+S8 WalkTogether 2 2499
+S8 Eating 2694
+S8 Eating 1 2807
+S8 Discussion 2064
+S8 Greeting 1 1598
+S8 Smoking 1 2932
+S8 Discussion 1 1931
+S8 Purchases 1 1274
+S8 Waiting 1 1612
+S8 Sitting 1 2073
+S8 Posing 1685
+S8 WalkDog 1644
+S8 Directions 2028
+S8 Posing 1 1812
+S8 Smoking 3333
+S9 Phoning 1 3821
+S9 Photo 1 1449
+S9 SittingDown 2932
+S9 Phoning 3319
+S9 Greeting 1447
+S9 Purchases 1529
+S9 WalkDog 1 2217
+S9 Waiting 3312
+S9 SittingDown 1 1554
+S9 Walking 1 2446
+S9 WalkTogether 1703
+S9 Sitting 2962
+S9 WalkTogether 1 1685
+S9 Photo 2346
+S9 Directions 1 2356
+S9 Walking 1612
+S9 Eating 2686
+S9 Eating 1 2663
+S9 Greeting 1 2711
+S9 Smoking 1 4377
+S9 Discussion 1 5873
+S9 Purchases 1 1226
+S9 Discussion 2 5306
+S9 Waiting 1 1612
+S9 Sitting 1 3071
+S9 Posing 1964
+S9 WalkDog 2237
+S9 Directions 2699
+S9 Posing 1 1968
+S9 Smoking 4334
+S11 Photo 1 1545
+S11 SittingDown 1841
+S11 Phoning 2 3492
+S11 Phoning 3 3390
+S11 Greeting 1808
+S11 Purchases 1040
+S11 WalkDog 1 1187
+S11 Waiting 2262
+S11 SittingDown 1 2004
+S11 Walking 1 1637
+S11 WalkTogether 1360
+S11 Sitting 2179
+S11 WalkTogether 1 1793
+S11 Photo 1990
+S11 Directions 1 1552
+S11 Walking 1621
+S11 Greeting 2 1695
+S11 Eating 2203
+S11 Eating 1 2275
+S11 Smoking 2 2767
+S11 Discussion 1 2684
+S11 Purchases 1 1026
+S11 Discussion 2 2198
+S11 Waiting 1 2280
+S11 Sitting 1 1857
+S11 Posing 1407
+S11 WalkDog 1435
+S11 Posing 1 1481
+S11 Smoking 2410
+/home/rh/miniconda3/envs/hybrik/lib/python3.10/site-packages/torchvision/models/_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.
+  warnings.warn(
+/home/rh/miniconda3/envs/hybrik/lib/python3.10/site-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=ResNet50_Weights.IMAGENET1K_V1`. You can also use `weights=ResNet50_Weights.DEFAULT` to get the most up-to-date weights.
+  warnings.warn(msg)
+Training:   0%|                                                                                                                                                                  | 0/40 [00:00<?, ?it/s]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

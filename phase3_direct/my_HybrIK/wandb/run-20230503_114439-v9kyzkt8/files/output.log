@@ -1,0 +1,43 @@
+S1 Posing 992
+S1 Posing 1 1167
+S5 Posing 1885
+S5 Posing 1 2245
+S6 Posing 1161
+S6 Posing 2 1159
+S7 Posing 2920
+S7 Posing 1 2341
+S8 Posing 1685
+S8 Posing 1 1812
+S9 Posing 1964
+S9 Posing 1 1968
+S11 Posing 1407
+S11 Posing 1 1481
+/home/rh/miniconda3/envs/hybrik/lib/python3.10/site-packages/torchvision/models/_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.
+  warnings.warn(
+/home/rh/miniconda3/envs/hybrik/lib/python3.10/site-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=ResNet50_Weights.IMAGENET1K_V1`. You can also use `weights=ResNet50_Weights.DEFAULT` to get the most up-to-date weights.
+  warnings.warn(msg)
+Training:   0%|                                                                          | 0/30 [00:00<?, ?it/s]
+Traceback (most recent call last):
+  File "/home/rh/codes/3D_PoseEstimation/phase3_direct/my_HybrIK/train.py", line 172, in <module>
+    train(batch_size,n_epochs,lr,device,run_name)
+  File "/home/rh/codes/3D_PoseEstimation/phase3_direct/my_HybrIK/train.py", line 75, in train
+    y_hat = model_direct(frame)
+  File "/home/rh/miniconda3/envs/hybrik/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1501, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/rh/codes/3D_PoseEstimation/phase3_direct/my_HybrIK/Model.py", line 90, in forward
+    x0 = self.preact(x)
+  File "/home/rh/miniconda3/envs/hybrik/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1501, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/rh/codes/3D_PoseEstimation/phase3_direct/my_HybrIK/Resnet.py", line 141, in forward
+    x = self.layer3(x)  # 1024 * h/16 * w/16
+  File "/home/rh/miniconda3/envs/hybrik/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1501, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/rh/miniconda3/envs/hybrik/lib/python3.10/site-packages/torch/nn/modules/container.py", line 217, in forward
+    input = module(input)
+  File "/home/rh/miniconda3/envs/hybrik/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1501, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/rh/codes/3D_PoseEstimation/phase3_direct/my_HybrIK/Resnet.py", line 93, in forward
+    out = F.relu(out)
+  File "/home/rh/miniconda3/envs/hybrik/lib/python3.10/site-packages/torch/nn/functional.py", line 1457, in relu
+    result = torch.relu(input)
+torch.cuda.OutOfMemoryError: CUDA out of memory. Tried to allocate 64.00 MiB (GPU 0; 23.70 GiB total capacity; 6.46 GiB already allocated; 33.50 MiB free; 6.53 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF
