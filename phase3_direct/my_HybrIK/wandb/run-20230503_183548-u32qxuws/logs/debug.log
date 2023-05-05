@@ -24,3 +24,4 @@ config: {'learning_rate': 0.005, 'architecture': 'CNN', 'dataset': 'H3.6', 'epoc
 2023-05-03 18:35:49,803 INFO    MainThread:312140 [wandb_run.py:_redirect():2078] Wrapping output streams.
 2023-05-03 18:35:49,803 INFO    MainThread:312140 [wandb_run.py:_redirect():2103] Redirects installed.
 2023-05-03 18:35:49,803 INFO    MainThread:312140 [wandb_init.py:init():829] run started, returning control to user process
+2023-05-05 10:30:13,495 WARNING MsgRouterThr:312140 [router.py:message_loop():77] message_loop has been closed

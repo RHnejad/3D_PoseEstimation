@@ -6,7 +6,7 @@ from utils import camera_parameters, qv_mult
 import cv2
 
 systm = "vita17"  #izar,vita17,laptop
-act = "" #"Walking"
+act = "Walking 1" #"Walking"
 load_imgs = True
 from_videos = False
 
@@ -113,38 +113,38 @@ class H36_dataset(Dataset):
 
             
             if dim == 2:
-                with open("mean_train_2d.npy","wb") as f:
+                with open("./logs/run_time_utils/mean_train_2d.npy","wb") as f:
                     np.save(f, data_mean)
-                with open("std_train_2d.npy","wb") as f:
+                with open("./logs/run_time_utils/std_train_2d.npy","wb") as f:
                     np.save(f, data_std)  
 
 
             elif dim == 3:
-                with open("mean_train_3d.npy","wb") as f:
+                with open("./logs/run_time_utils/mean_train_3d.npy","wb") as f:
                     np.save(f, data_mean)  
-                with open("std_train_3d.npy","wb") as f:
+                with open("./logs/run_time_utils/std_train_3d.npy","wb") as f:
                     np.save(f, data_std)  
                     
-                with open("max_train_3d.npy","wb") as f:
+                with open("./logs/run_time_utils/max_train_3d.npy","wb") as f:
                     np.save(f, np.max(dataset, axis=0))  
-                with open("min_train_3d.npy","wb") as f:
+                with open("./logs/run_time_utils/min_train_3d.npy","wb") as f:
                     np.save(f, np.min(dataset, axis=0)) 
 
 
         if dim == 2:
-            with open("mean_train_2d.npy","rb") as f:
+            with open("./logs/run_time_utils/mean_train_2d.npy","rb") as f:
                 mean_train_2d = np.load(f)
-            with open("std_train_2d.npy","rb") as f:
+            with open("./logs/run_time_utils/std_train_2d.npy","rb") as f:
                 std_train_2d = np.load(f)  
         elif dim == 3:
-            with open("mean_train_3d.npy","rb") as f:
+            with open("./logs/run_time_utils/mean_train_3d.npy","rb") as f:
                 mean_train_3d =np.load(f)  
-            with open("std_train_3d.npy","rb") as f:
+            with open("./logs/run_time_utils/std_train_3d.npy","rb") as f:
                 std_train_3d = np.load(f)  
                 
-            with open("max_train_3d.npy","rb") as f:
+            with open("./logs/run_time_utils/max_train_3d.npy","rb") as f:
                 max_train_3d =np.load(f)  
-            with open("min_train_3d.npy","rb") as f:
+            with open("./logs/run_time_utils/min_train_3d.npy","rb") as f:
                 min_train_3d = np.load(f)  
 
 

@@ -247,5 +247,5 @@ def plot_losses(epoch_losses,epoch_eval_loss,epoch_metric,epoch_eval_metric, run
 
     plt.legend(["training","validation"])
     
-    plt.savefig("./"+run_name+"/plot_metric.pdf")
+    plt.savefig(run_name+"/plot_metric.pdf")
     plt.show()
