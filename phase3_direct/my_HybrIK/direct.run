@@ -1,0 +1,17 @@
+#!/bin/bash
+#SBATCH --chdir /home/rhossein/codes/3D_PoseEstimation/phase3_direct/my_HybrIK/
+#SBATCH --nodes 1
+#SBATCH --gres=gpu:1
+#SBATCH --cpus-per-task 16
+#SBATCH --ntasks 1
+#SBATCH --account=vita
+#SBATCH --reservation=vita-neurips
+#SBATCH --mem 99G
+#SBATCH --time 1-23:00:00
+#SBATCH --output logs/code%j.log
+#SBATCH --output logs/code%j.out
+
+module load gcc/8.4.0-cuda cuda/11.6.2
+conda activate hybrik
+time python3 train.py
+

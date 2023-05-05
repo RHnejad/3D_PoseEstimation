@@ -5,8 +5,8 @@ from torch.utils.data import Dataset
 from utils import camera_parameters, qv_mult
 import cv2
 
-systm = "vita17"  #izar,vita17,laptop
-act = "Walking 1" #"Walking"
+systm = "izar"  #izar,vita17,laptop
+act = "" #"Walking"
 load_imgs = True
 from_videos = False
 
@@ -30,12 +30,13 @@ output_dimension = 3
 
 num_of_joints = 17 #data = np.insert(data, 0 , values= [0,0,0], axis=0 )
 
-dataset_direcotories = {"izar":"/home/rhossein/venvs/codes/VideoPose3D/data/",
-                "vita17":"/data/rh-data/h3.6/npz/", 
-                "laptop": "/Users/rh/test_dir/h3.6/VideoPose3D/data/npz/"}  #vita17 used to be: /home/rh/h3.6/dataset/npz/",
+dataset_direcotories = {"izar":"/work/vita/datasets/h3.6", #/home/rhossein/venvs/codes/VideoPose3D/data/
+                "vita17":"/data/rh-data/h3.6", 
+                "laptop": "/Users/rh/test_dir/h3.6/VideoPose3D/data"}  #vita17 used to be: /home/rh/h3.6/dataset/npz/",
+
 data_directory =  dataset_direcotories[systm]
-path_positions_2d_VD3d = data_directory + "data_2d_h36m.npz" #"data_2d_h36m_gt.npz" 
-path_positions_3d_VD3d =data_directory + "data_3d_h36m.npz"
+path_positions_2d_VD3d = data_directory + "/npz/data_2d_h36m.npz" #"data_2d_h36m_gt.npz" 
+path_positions_3d_VD3d =data_directory + "/npz/data_3d_h36m.npz"
 
 
 subjects = ['S1', 'S5', 'S6', 'S7', 'S8', 'S9', 'S11']
@@ -231,13 +232,12 @@ class H36_dataset(Dataset):
 
                             if load_imgs:
                                 if from_videos:
-                                    video_and_frame_paths.append( ["/data/rh-data/h3.6/videos/"+s+"/Videos/"+a+self.cam_ids[c]+".mp4",frame_num])
+                                    video_and_frame_paths.append( [data_directory+"/videos/"+s+"/Videos/"+a+self.cam_ids[c]+".mp4",frame_num])
                                 else:
                                     if systm == "laptop":
                                         video_and_frame_paths.append( ["/Users/rh/test_dir/h3.6/dataset/S1_frames/"+a+self.cam_ids[c]+".mp4/"+str(frame_num+1).zfill(4)+".jpg",frame_num])
-                                        # print(video_and_frame_paths)
                                     else:
-                                        video_and_frame_paths.append( ["/data/rh-data/h3.6/videos/"+s+"/outputVideos/"+a+self.cam_ids[c]+".mp4/"+str(frame_num+1).zfill(4)+".jpg",frame_num])
+                                        video_and_frame_paths.append( [data_directory+"/videos/"+s+"/outputVideos/"+a+self.cam_ids[c]+".mp4/"+str(frame_num+1).zfill(4)+".jpg",frame_num])
 
                             i = i + 1 
 

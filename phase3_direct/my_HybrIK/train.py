@@ -95,7 +95,7 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
             
         train_metric = torch.mean(train_metric) #Please be carefull that here we will have zero for the first joint error so maybe it shoudl be the mean over 1:
         if num_of_joints==17 and zero_centre:
-                train_metric *= (17/16)
+                train_metric *= (17/16)*100
                 
             
         lr_schdlr.step(loss)
@@ -141,7 +141,7 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
             
         val_metric = torch.mean(val_metric)
         if num_of_joints==17 and zero_centre:
-            val_metric *= (17/16)
+            val_metric *= (17/16)*100
         
         epoch_val_loss.append(val_loss)
         epoch_val_metric.append(val_metric.cpu().item() )
@@ -157,26 +157,33 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
     
     plot_losses(epoch_losses,epoch_val_loss,epoch_metric,epoch_val_metric,"./logs/visualizations/"+run_name)
     
+    y_v = y_v.cpu().detach().numpy().reshape(-1, num_of_joints,output_dimension)
+    y_hat_v = y_hat_v.cpu().detach().numpy().reshape(-1, num_of_joints,output_dimension)
+    visualize_3d(y_v[0],y_hat_v[0],   "./logs/visualizations/"+str(run_name)+"/3d_test_a.png")
+    visualize_3d(y_v[-1],y_hat_v[-1], "./logs/visualizations/"+str(run_name)+"/3d_test_b.png")         
+    
+    torch.save({'epoch' : epoch ,'model' : model_direct.state_dict(), 'optimizer': optimizer.state_dict() , 'scheduler': lr_schdlr.state_dict() },"./logs/"+run_name)
+    
     return model_direct
 
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("DEVICE:",device)
-    batch_size = 64
-    n_epochs= 10
+    batch_size = 32
+    n_epochs= 40
     lr = 0.005 #0.001
-    run_name = "test_s1_walk 1_may5"
+    run_name = "test_izar_all_may5"
     CtlCSave = False
-    
+    Resume = False
     
     if not os.path.exists("./logs/visualizations/"+run_name):
         os.mkdir(os.path.join("./logs/visualizations/", run_name))
         
-    wandb.init(project="Direct_3D_Pose",name=run_name, config={"learning_rate": lr, "architecture": "CNN","dataset": "H3.6","epochs": 30,})
+    wandb.init(project="Direct_3D_Pose_izar",name=run_name, config={"learning_rate": lr, "architecture": "CNN","dataset": "H3.6","epochs": 30,})
     
     try:
-        model = train(batch_size,n_epochs,lr,device,run_name,resume=True)
-        torch.save(model.state_dict(),"./logs/"+run_name)
+        model = train(batch_size,n_epochs,lr,device,run_name,resume=Resume)
+        torch.save(model.state_dict(),"./logs/second_"+run_name)
     except KeyboardInterrupt:
             if CtlCSave: torch.save(model.state_dict(),"./logs/"+run_name)
     
