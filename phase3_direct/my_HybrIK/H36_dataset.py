@@ -5,7 +5,7 @@ from torch.utils.data import Dataset
 from utils import camera_parameters, qv_mult
 import cv2
 
-systm = "izar"  #izar,vita17,laptop
+systm = "vita17"  #izar,vita17,laptop
 act = "" #"Walking"
 load_imgs = True
 from_videos = False
@@ -46,11 +46,10 @@ KeyPoints_from3d = [0,1,2,3,6,7,8,12,13,14,15,17,18,19,25,26,27]
 KeyPoints_from3d_to_delete = [4,5,9,10,11,16,20,21,22,23,24,28,29,30,31]
 
 
-
 class H36_dataset(Dataset):
     def __init__(self, num_cams = 1, subjectp=subjects , action=act, transform=None, target_transform=None, is_train = True):
         
-        self.cam_ids = [".54138969", ".55011271", ".58860488",  ".60457274", ]
+        self.cam_ids = [".54138969", ".55011271", ".58860488",  ".60457274" ]
 
         self.dataset2d, self.dataset3d, self.video_and_frame_paths = self.read_data(subjects= subjectp,action=action,is_train = is_train)
         self.dataset2d = self.process_data(self.dataset2d,  sample = False if len(subjectp)==2 else sample, is_train = is_train, standardize=standardize_2d, z_c = False)
@@ -63,9 +62,6 @@ class H36_dataset(Dataset):
 
         self.frame =  np.zeros((1000,1002,3))
         
-        
-
-
     def __len__(self):
         return len(self.dataset3d) #number of all the frames 
 
@@ -79,7 +75,6 @@ class H36_dataset(Dataset):
                 self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
             else :
                 self.frame = cv2.imread(self.video_and_frame_paths[idx][0])
-                # print("***",self.video_and_frame_paths[idx][0], self.frame ,"***")
                 self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
 
             
@@ -127,9 +122,13 @@ class H36_dataset(Dataset):
                     np.save(f, data_std)  
                     
                 with open("./logs/run_time_utils/max_train_3d.npy","wb") as f:
-                    np.save(f, np.max(dataset, axis=0))  
+                    temp_max =  np.max(dataset, axis=0)
+                    temp_max = np.ones((num_of_joints,3))
+                    np.save(f, temp_max)        
                 with open("./logs/run_time_utils/min_train_3d.npy","wb") as f:
-                    np.save(f, np.min(dataset, axis=0)) 
+                    temp_min = np.min(dataset, axis=0)
+                    temp_min = np.ones((num_of_joints,3)) * -1
+                    np.save(f, temp_min ) 
 
 
         if dim == 2:
@@ -186,8 +185,10 @@ class H36_dataset(Dataset):
 
         return dataset
     
-    
-    def read_data(self,subjects = subjects, action = "", is_train=True):
+    @staticmethod
+    def read_data(subjects = subjects, action = "", is_train=True):
+        
+        cam_ids = [".54138969", ".55011271", ".58860488",  ".60457274" ]
 
         data_file_3d = np.load(path_positions_3d_VD3d, allow_pickle=True)
         data_file_2d = np.load(path_positions_2d_VD3d, allow_pickle=True)
@@ -226,20 +227,60 @@ class H36_dataset(Dataset):
                                         
                             all_in_one_dataset_3d[i] = tmp
 
-                            tmp2 = data_file_2d[s][a+self.cam_ids[c]][frame_num]
+                            tmp2 = data_file_2d[s][a+cam_ids[c]][frame_num]
                             
                             all_in_one_dataset_2d[i] = tmp2[ KeyPoints_from3d ,:] #only keeping the 16 or 17 keypoints we want
 
                             if load_imgs:
                                 if from_videos:
-                                    video_and_frame_paths.append( [data_directory+"/videos/"+s+"/Videos/"+a+self.cam_ids[c]+".mp4",frame_num])
+                                    video_and_frame_paths.append( [data_directory+"/videos/"+s+"/Videos/"+a+cam_ids[c]+".mp4",frame_num])
                                 else:
                                     if systm == "laptop":
-                                        video_and_frame_paths.append( ["/Users/rh/test_dir/h3.6/dataset/S1_frames/"+a+self.cam_ids[c]+".mp4/"+str(frame_num+1).zfill(4)+".jpg",frame_num])
+                                        video_and_frame_paths.append( ["/Users/rh/test_dir/h3.6/dataset/S1_frames/"+a+cam_ids[c]+".mp4/"+str(frame_num+1).zfill(4)+".jpg",frame_num])
                                     else:
-                                        video_and_frame_paths.append( [data_directory+"/videos/"+s+"/outputVideos/"+a+self.cam_ids[c]+".mp4/"+str(frame_num+1).zfill(4)+".jpg",frame_num])
+                                        video_and_frame_paths.append( [data_directory+"/videos/"+s+"/outputVideos/"+a+cam_ids[c]+".mp4/"+str(frame_num+1).zfill(4)+".jpg",frame_num])
 
                             i = i + 1 
 
         
         return all_in_one_dataset_2d, all_in_one_dataset_3d , video_and_frame_paths
+
+
+if __name__ == "__main__" :
+    
+    import matplotlib.pyplot as plt
+ 
+    all_in_one_dataset_2d, all_in_one_dataset_3d , video_and_frame_paths = H36_dataset.read_data(subjects=subjects[0:5])
+    
+    for i in range(all_in_one_dataset_3d.shape[0]):
+        all_in_one_dataset_3d[i,1:] = all_in_one_dataset_3d[i,1:] - all_in_one_dataset_3d[i,0]
+        all_in_one_dataset_3d[i,0] *= 0 
+    
+    for dim in range(3):
+        fig, ax = plt.subplots()
+        for joint in range(1,17):
+            ax.hist(all_in_one_dataset_3d[:, joint, dim], bins=50, alpha=0.5, label=f"Joint {joint+1}")
+        ax.set_title(f"Histogram of All Joints in {['x', 'y', 'z'][dim]} Dimension")
+        ax.set_xlabel("Value")
+        ax.set_ylabel("Frequency")
+        ax.legend()
+        fig.savefig(f"all_joints_{['x', 'y', 'z'][dim]}.png")
+        plt.show()
+    
+    all_in_one_dataset_2d, all_in_one_dataset_3d , video_and_frame_paths = H36_dataset.read_data(subjects=subjects[5:7])
+    for i in range(all_in_one_dataset_3d.shape[0]):
+        all_in_one_dataset_3d[i,1:] = all_in_one_dataset_3d[i,1:] - all_in_one_dataset_3d[i,0]
+        all_in_one_dataset_3d[i,0] *= 0 
+        
+    for dim in range(3):
+        fig2, ax = plt.subplots()
+        for joint in range(1,17):
+            ax.hist(all_in_one_dataset_3d[:, joint, dim], bins=50, alpha=0.5, label=f"Joint {joint+1}")
+        ax.set_title(f"Histogram of All Joints in {['x', 'y', 'z'][dim]} Dimension")
+        ax.set_xlabel("Value")
+        ax.set_ylabel("Frequency")
+        ax.legend()
+        fig2.savefig(f"test_all_joints_{['x', 'y', 'z'][dim]}.png")
+        plt.show()
+        
+   

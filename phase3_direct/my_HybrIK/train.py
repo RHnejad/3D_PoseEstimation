@@ -23,13 +23,27 @@ def load_statisctics(file_name):
 
 
 def train(batch_size,n_epochs,lr,device,run_name,resume=False):
-    training_set = H36_dataset(num_cams=num_cameras, subjectp=subjects[0:5], is_train = True) 
-    test_set     = H36_dataset(num_cams=num_cameras, subjectp=subjects[5:7] , is_train = False)
+    
+    #Creating the Model
+    model_direct= Model_3D().to(device)
+    
+    loss_function = torch.nn.MSELoss(reduction = "mean")
+    optimizer = torch.optim.Adam(model_direct.parameters(),lr = lr)
+    
+    lr_schdlr = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.7, patience=3, cooldown=2, min_lr=5e-6, verbose=True )
+    
+    if resume:
+        model_direct.load_state_dict(torch.load("./logs/"+run_name)["model"])
+        batch_size = torch.load("./logs/"+run_name)["batch_size"]
+        last_epoch = torch.load("./logs/"+run_name)["epoch"]
+        
+
+    training_set = H36_dataset(num_cams=num_cameras, subjectp=subjects[0:2], is_train = True) 
+    test_set     = H36_dataset(num_cams=num_cameras, subjectp=subjects[0:2] , is_train = False)
     
     train_loader = DataLoader( training_set, shuffle=True, batch_size=batch_size, num_workers= 1)
     test_loader = DataLoader(test_set, shuffle=True, batch_size=batch_size, num_workers=1)
-
-    
+   
     mean_train_3d, std_train_3d = load_statisctics("mean_train_3d"), load_statisctics("std_train_3d")
     max_train_3d, min_train_3d = load_statisctics("max_train_3d"), load_statisctics("min_train_3d")
     max_train_3d, min_train_3d = torch.from_numpy(max_train_3d).to(device), torch.from_numpy(min_train_3d).to(device)
@@ -39,17 +53,6 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
 
     mean_k = mean_train_3d [list(range(17-num_of_joints,17)),:]
     std_k = std_train_3d [list(range(17-num_of_joints,17)),:]    
-    
-    #Creating the Model
-    model_direct= Model_3D().to(device)
-    if resume:
-        model_direct.load_state_dict(torch.load("./logs/"+run_name))
-        
-
-    loss_function = torch.nn.MSELoss(reduction = "mean")
-    optimizer = torch.optim.Adam(model_direct.parameters(),lr = lr)
-    
-    lr_schdlr = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.7, patience=3, cooldown=2, min_lr=5e-6, verbose=True )
     
     epoch_losses, epoch_metric = list(), list()
     epoch_val_loss, epoch_val_metric  = list(), list()
@@ -95,7 +98,7 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
             
         train_metric = torch.mean(train_metric) #Please be carefull that here we will have zero for the first joint error so maybe it shoudl be the mean over 1:
         if num_of_joints==17 and zero_centre:
-                train_metric *= (17/16)*100
+                train_metric *= (17/16)*1000
                 
             
         lr_schdlr.step(loss)
@@ -141,7 +144,7 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
             
         val_metric = torch.mean(val_metric)
         if num_of_joints==17 and zero_centre:
-            val_metric *= (17/16)*100
+            val_metric *= (17/16)*1000
         
         epoch_val_loss.append(val_loss)
         epoch_val_metric.append(val_metric.cpu().item() )
@@ -152,40 +155,106 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
         
     y = y.cpu().detach().numpy().reshape(-1, num_of_joints,output_dimension)
     y_hat = y_hat.cpu().detach().numpy().reshape(-1, num_of_joints,output_dimension)
-    visualize_3d(y[0],y_hat[0],   "./logs/visualizations/"+str(run_name)+"/3d_train_a.png")
-    visualize_3d(y[-1],y_hat[-1], "./logs/visualizations/"+str(run_name)+"/3d_train_b.png")     
+    visualize_3d(y[0],y_hat[0],   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_train_a.png")
+    visualize_3d(y[-1],y_hat[-1], "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_train_b.png")     
     
-    plot_losses(epoch_losses,epoch_val_loss,epoch_metric,epoch_val_metric,"./logs/visualizations/"+run_name)
+    plot_losses(epoch_losses,epoch_val_loss,epoch_metric,epoch_val_metric,"./logs/visualizations/"+(resume*"resumed_")+run_name)
     
     y_v = y_v.cpu().detach().numpy().reshape(-1, num_of_joints,output_dimension)
     y_hat_v = y_hat_v.cpu().detach().numpy().reshape(-1, num_of_joints,output_dimension)
-    visualize_3d(y_v[0],y_hat_v[0],   "./logs/visualizations/"+str(run_name)+"/3d_test_a.png")
-    visualize_3d(y_v[-1],y_hat_v[-1], "./logs/visualizations/"+str(run_name)+"/3d_test_b.png")         
+    visualize_3d(y_v[0],y_hat_v[0],   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_test_a.png")
+    visualize_3d(y_v[-1],y_hat_v[-1], "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_test_b.png")         
     
-    torch.save({'epoch' : epoch ,'model' : model_direct.state_dict(), 'optimizer': optimizer.state_dict() , 'scheduler': lr_schdlr.state_dict() },"./logs/"+run_name)
+    torch.save({'epoch' : epoch, 'batch_size':batch_size, 'model' : model_direct.state_dict(), 'optimizer': optimizer.state_dict() , 'scheduler': lr_schdlr.state_dict() },"./logs/"+(resume*"resumed_")+run_name)
     
     return model_direct
+
+
+def infer(run_name):
+    
+    model_direct= Model_3D().to(device)
+    model_direct.load_state_dict(torch.load("./logs/"+run_name)["model"])
+    
+    test_set     = H36_dataset(num_cams=num_cameras, subjectp=subjects[5:7] , is_train = False, action="Walking 1")
+    test_loader = DataLoader(test_set, shuffle=True, batch_size=batch_size, num_workers=1)
+ 
+    mean_train_3d, std_train_3d = load_statisctics("mean_train_3d"), load_statisctics("std_train_3d")
+    max_train_3d, min_train_3d = load_statisctics("max_train_3d"), load_statisctics("min_train_3d")
+    max_train_3d, min_train_3d = torch.from_numpy(max_train_3d).to(device), torch.from_numpy(min_train_3d).to(device)
+    if zero_centre and num_of_joints==17 : 
+        max_train_3d[:1,:] *= 0 
+        min_train_3d[:1,:] *= 0
+    
+    loss_function = torch.nn.MSELoss(reduction = "mean")    
+        
+    with torch.no_grad():
+        model_direct.eval()
+        val_loss = 0.0
+        val_metric = torch.zeros(num_of_joints).to(device)
+        
+        for x_v, y_v, frame_v  in test_loader:
+            
+            x_v,y_v=x_v.float(),y_v.float()
+            x_v, y_v = x_v.to(device), y_v.to(device)
+            
+            frame_v = frame_v.float()
+            frame_v =frame_v.to(device)
+            
+            y_hat_v = model_direct(frame_v)
+                
+            y_hat_v = y_hat_v.reshape(-1,num_of_joints,output_dimension)
+            
+            loss_v = loss_function(y_hat_v, y_v) 
+            
+            if standardize_3d :
+                if Normalize:
+                    y_v = torch.mul(y_v , max_train_3d-min_train_3d ) + min_train_3d 
+                    y_hat_v = torch.mul(y_hat_v,  max_train_3d-min_train_3d ) + min_train_3d 
+                # else:
+                #     y_v = torch.mul(y_v , temp_std ) + temp_mean #DeStandardize
+                #     y_hat_v = torch.mul(y_hat_v, temp_std ) + temp_mean   
+                                    
+            metric_v = loss_MPJPE(y_hat_v, y_v) 
+        
+            val_loss += loss_v.cpu().item() / len(test_loader)
+            val_metric += (metric_v / len(test_set))
+            
+        val_metric = torch.mean(val_metric)
+        if num_of_joints==17 and zero_centre:
+            val_metric *= (17/16)*1000
+
+
+        print(f"loss(test): {val_loss}, MPJPE(test){val_metric.cpu().item()}") 
+
+        y_v = y_v.cpu().detach().numpy().reshape(-1, num_of_joints,output_dimension)
+        y_hat_v = y_hat_v.cpu().detach().numpy().reshape(-1, num_of_joints,output_dimension)
+        visualize_3d(y_v[0],y_hat_v[0],   "./logs/visualizations/"+str(run_name)+"/"+"infer_"+"resumed_"+"3d_test_a.png")
+        visualize_3d(y_v[-1],y_hat_v[-1], "./logs/visualizations/"+str(run_name)+"/"+"infer_"+"resumed_"+"3d_test_b.png")     
 
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("DEVICE:",device)
-    batch_size = 32
-    n_epochs= 40
+    batch_size = 64
+    n_epochs= 10
     lr = 0.005 #0.001
-    run_name = "test_izar_all_may5"
+    run_name = "test and train the same (S1,S5)"
     CtlCSave = False
     Resume = False
+    Train = False
     
-    if not os.path.exists("./logs/visualizations/"+run_name):
-        os.mkdir(os.path.join("./logs/visualizations/", run_name))
+    if Train :
+        if not os.path.exists("./logs/visualizations/"+run_name):
+            os.mkdir(os.path.join("./logs/visualizations/", run_name))
+            
+        wandb.init(project="Direct_3D_Pose",name=run_name, config={"learning_rate": lr, "architecture": "CNN","dataset": "H3.6","epochs": n_epochs,})
         
-    wandb.init(project="Direct_3D_Pose_izar",name=run_name, config={"learning_rate": lr, "architecture": "CNN","dataset": "H3.6","epochs": 30,})
+        try:
+            model = train(batch_size,n_epochs,lr,device,run_name,resume=Resume)
+            torch.save(model.state_dict(),"./logs/second_"+run_name)
+        except KeyboardInterrupt:
+                if CtlCSave: torch.save(model.state_dict(),"./logs/"+run_name)
+        
+        wandb.finish()
     
-    try:
-        model = train(batch_size,n_epochs,lr,device,run_name,resume=Resume)
-        torch.save(model.state_dict(),"./logs/second_"+run_name)
-    except KeyboardInterrupt:
-            if CtlCSave: torch.save(model.state_dict(),"./logs/"+run_name)
-    
-    wandb.finish()
-    
+    else: 
+        infer(run_name)

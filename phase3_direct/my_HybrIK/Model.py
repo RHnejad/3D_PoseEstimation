@@ -95,9 +95,9 @@ class Model_3D(nn.Module):
         out = self.norm_heatmap(self.norm_type, out)
         assert out.dim() == 3, out.shape
         
-        maxvals = torch.ones((*out.shape[:2], 1), dtype=torch.float, device=out.device) #check
+        # maxvals = torch.ones((*out.shape[:2], 1), dtype=torch.float, device=out.device) #check
 
-        heatmaps = out / out.sum(dim=2, keepdim=True) #out.sun is 1 if softmax so not actually needed
+        heatmaps = out / out.sum(dim=2, keepdim=True) #out.sum is 1 if softmax so not actually needed
         
         heatmaps = heatmaps.reshape((heatmaps.shape[0], self.num_joints, self.depth_dim, self.height_dim, self.width_dim))
         

@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 def visualize_3d(keypoints,keypoints2, name="3d"):
+    
     sk_points = [[0,1],[1,2],[2,3],[0,4],[4,5],[5,6],[5,6],[0,7],[7,8],[8,9],[9,10],[8,11],[11,12],[12,13],[8,14],[14,15],[15,16]]
 
     if keypoints.shape[0] != 17 :
@@ -30,6 +31,9 @@ def visualize_3d(keypoints,keypoints2, name="3d"):
     ax.axes.set_xlim3d(left=-1, right=1) 
     ax.axes.set_ylim3d(bottom=-1, top=1) 
     ax.axes.set_zlim3d(bottom=-1 , top=1 ) 
+    
+    ax.view_init(elev=70, azim=-30, roll=30)
+    
     plt.savefig(name)
     # plt.savefig("./"+run_num+"/"+name +'.png')
     # plt.show()
