@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/Users/rh/test_dir/3D_PoseEstimation/phase4_joined/train.py", line 252, in <module>
+    model = train(batch_size,n_epochs,lr,device,run_name,resume=Resume)
+  File "/Users/rh/test_dir/3D_PoseEstimation/phase4_joined/train.py", line 41, in train
+    training_set = Custom_video_dataset()
+  File "/Users/rh/test_dir/3D_PoseEstimation/phase4_joined/Custom_Video_dataset.py", line 60, in __init__
+    self.poses.shape[i,1:] = self.poses.shape[i,1:] - self.poses.shape[i,0]
+TypeError: tuple indices must be integers or slices, not tuple

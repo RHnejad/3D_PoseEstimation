@@ -72,9 +72,7 @@ def save_to_json(video_name : list =None):
         dir_name = video
         json_outputs_dir_path = os.path.join(outputs_directory, dir_name)
         jsons_force = os.path.join(json_outputs_dir_path, "jsons_force")
-        
-        
-        
+
         if os.path.isdir(jsons_force):
             directory = os.listdir(jsons_force)
             directory.sort()

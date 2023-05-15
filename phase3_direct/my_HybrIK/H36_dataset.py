@@ -5,7 +5,7 @@ from torch.utils.data import Dataset
 from utils import camera_parameters, qv_mult
 import cv2
 
-systm = "vita17"  #izar,vita17,laptop
+systm = "laptop"  #izar,vita17,laptop
 act = "" #"Walking"
 load_imgs = True
 from_videos = False

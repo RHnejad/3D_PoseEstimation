@@ -1,0 +1,34 @@
+{
+    "os": "macOS-13.3.1-arm64-arm-64bit",
+    "python": "3.9.6",
+    "heartbeatAt": "2023-05-15T18:35:19.092498",
+    "startedAt": "2023-05-15T18:35:18.432738",
+    "docker": null,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "/Users/rh/test_dir/3D_PoseEstimation/phase4_joined/train.py",
+    "codePath": "phase4_joined/train.py",
+    "git": {
+        "remote": "https://github.com/RHnejad/3D_PoseEstimation.git",
+        "commit": "2267621e3acc7c5f19c1aa75604a2e7d7d8050ff"
+    },
+    "email": "r.h817@yahoo.com",
+    "root": "/Users/rh/test_dir/3D_PoseEstimation",
+    "host": "tsf-444-wpa-2-165.epfl.ch",
+    "username": "rh",
+    "executable": "/Library/Developer/CommandLineTools/usr/bin/python3",
+    "cpu_count": 10,
+    "cpu_count_logical": 10,
+    "disk": {
+        "total": 926.3517189025879,
+        "used": 8.454704284667969
+    },
+    "gpuapple": {
+        "type": "arm",
+        "vendor": "Apple"
+    },
+    "memory": {
+        "total": 16.0
+    }
+}
