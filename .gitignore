@@ -1,2 +1,8 @@
 phase3_direct/my_HybrIK/wandb/
 phase3_direct/my_HybrIK/logs/
+phase2_opp_mb/ffmpeg_frames/
+phase2_opp_mb/MB_3d_frames/
+phase2_opp_mb/opp_2d_frames/
+phase2_opp_mb/opp_outputs/
+phase2_opp_mb/raw_videos/
+phase2_opp_mb/reduced_fps_videos/
