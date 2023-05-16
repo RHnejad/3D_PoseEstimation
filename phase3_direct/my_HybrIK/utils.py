@@ -15,24 +15,29 @@ def visualize_3d(keypoints,keypoints2, name="3d"):
     xdata = keypoints.T[0]
     ydata = keypoints.T[1]
     zdata = keypoints.T[2]
-    ax.scatter(xdata,ydata,zdata,"b",label="expectations")
+    ax.scatter(xdata,ydata,zdata,"b",label="gt")
     for i in range(17):
         ax.plot(xdata[sk_points[i]], ydata[sk_points[i]], zdata[sk_points[i]] , "b" )
 
     xdata2 = keypoints2.T[0]
     ydata2 = keypoints2.T[1]
     zdata2 = keypoints2.T[2]
-    ax.scatter(xdata2,ydata2,zdata2, "r" , label ="reality")
+    ax.scatter(xdata2,ydata2,zdata2, "r" , label ="pred")
     for i in range(17):
         ax.plot(xdata2[sk_points[i]], ydata2[sk_points[i]], zdata2[sk_points[i]] , "r" )
 
-    plt.legend()
+    plt.legend(loc = 'upper left' )
 
     ax.axes.set_xlim3d(left=-1, right=1) 
     ax.axes.set_ylim3d(bottom=-1, top=1) 
     ax.axes.set_zlim3d(bottom=-1 , top=1 ) 
     
-    ax.view_init(elev=70, azim=-30, roll=30)
+    ax.grid(False)
+    ax.axes.set_xticks([-1,0,1])
+    ax.axes.set_yticks([-1,0,1])
+    ax.axes.set_zticks([-1,0,1])
+    
+    ax.view_init(elev=120, azim=60)
     
     plt.savefig(name)
     # plt.savefig("./"+run_num+"/"+name +'.png')

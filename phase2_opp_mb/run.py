@@ -8,6 +8,7 @@ import subprocess
 
 
 main_directory = "/Users/rh/test_dir/h3.6/dataset/my_videos/"
+main_directory = "./"
 
 
 #coco2h36m:from https://github.com/Walter0807/MotionBERT/blob/main/lib/data/dataset_action.py with some changes 
@@ -349,18 +350,68 @@ def create_3d_mp4(video=None, fps=10):
     for file in os.listdir(frames_directory):
         if file.endswith('.png'):
             os.remove(os.path.join(frames_directory,file)) 
+
+def run_openpifpaf_H36():
+    
+    subjects = ['S1', 'S5', 'S6', 'S7', 'S8', 'S9', 'S11']   
+    subjects = ['S1']   
+    # for s in subjects:
+    #     "/data/rh-data/h3.6/videos/"+s+"/outputVideos/"+a+cam_ids[c]+".mp4/"+str(frame_num+1).zfill(4)+".jpg"  
+        
+    outputs_directory = main_directory+"opp_outputs/"
+    
+    for s in subjects:
+        data_path_s = "/data/rh-data/h3.6/videos/"+s+"/outputVideos/"
+        actions = os.listdir(data_path_s)
+
+        output_path_s = os.path.join(outputs_directory,s)
+        if not os.path.exists(output_path_s):
+            os.makedirs(output_path_s)
             
-                
+        for action in actions:           
+            data_path_a = os.path.join(data_path_s, action)
+            
+            if os.path.isdir(data_path_a):
+                output_path_a = os.path.join(output_path_s, action)
+                if not os.path.exists(output_path_a):
+                    os.makedirs(output_path_a)
+                    
+                frames = os.listdir(data_path_a)
+                for frame in frames:
+                    if frame.endswith(".jpg"):
+                        
+                        frame_directory = os.path.join(data_path_a, frame)
+                        
+                        bash_command = "CUDA_VISIBLE_DEVICES=1 python3 -m openpifpaf.predict '"+str(frame_directory)+ \
+                        "' --checkpoint shufflenetv2k30 --force-complete-pose --instance-threshold 0.2" + \
+                        " --json-output '"+str(output_path_a) +"'" #+ "--image-output '"+ str(imageOuts_force) 
+                        #seed treshhold / 
+                        
+                        subprocess.run(bash_command, shell=True)
+                        
+            else :
+                print(f"{data_path} not a directroy")
+
+      
 if __name__ == "__main__":
     
     video = "Walking 1.58860488.mp4"
     video = "yuzu_black.mp4"
     fps = 10
+    
+    #_____These are for any custom video___
     # run_ffmpeg([video], fps=fps)
     # run_openpifpaf([video])
-    # save_to_json([video])  
+    # save_to_json([video])
+    
+    #____For already existing H3.6 frames___
+    run_openpifpaf_H36()
+    
+    #____For making videos out of outputs___  
     # create_2d_mp4(video, fps=fps)
-    create_3d_mp4("Walking 1", fps=fps)
+    # create_3d_mp4("Walking 1", fps=fps)
+    
+    
     print("___DONE___")
     
     

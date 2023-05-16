@@ -30,13 +30,11 @@ output_dimension = 3
 num_of_joints = 17 #data = np.insert(data, 0 , values= [0,0,0], axis=0 )
 
 
-
-
 class Custom_video_dataset(Dataset):
     def __init__(self, video = "yuzu"):
         
-        self.MP_npy_path = "/Users/rh/test_dir/3D_PoseEstimation/phase2_opp_mb/MB_npy"    
-        self.frames_path = "/Users/rh/test_dir/3D_PoseEstimation/phase2_opp_mb/ffmpeg_frames"
+        self.MP_npy_path = "../phase2_opp_mb/MB_npy"    
+        self.frames_path = "../phase2_opp_mb/ffmpeg_frames"
         
         self.frames=[]
         self.poses=[]
@@ -60,6 +58,7 @@ class Custom_video_dataset(Dataset):
                 self.poses[i,1:] = self.poses[i,1:] - self.poses[i,0]            
             self.poses[:,:1,:] *= 0
             
+            
     def __len__(self):
         return len(self.frames)
         
@@ -77,6 +76,16 @@ class Custom_video_dataset(Dataset):
 if __name__ == "__main__":
 
     data = Custom_video_dataset()
+    print(data.poses.max())
     print(data.poses.max(axis=0))
+    print(data.poses.min())
+    print(data.poses.min(axis=0))
+    print("****")
     # print(data.__len__())
-    # print(data.__getitem__(-1))
+    print(data.__getitem__(0)[1])
+    
+    x,y,f = data.__getitem__(-1)
+    
+    import matplotlib.pyplot as plt
+    plt.imshow(f)
+    plt.show()

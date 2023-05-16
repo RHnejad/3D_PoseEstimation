@@ -33,9 +33,9 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
     lr_schdlr = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.7, patience=3, cooldown=2, min_lr=5e-6, verbose=True )
     
     if resume:
-        model_direct.load_state_dict(torch.load("./logs/"+run_name)["model"])
-        batch_size = torch.load("./logs/"+run_name)["batch_size"]
-        last_epoch = torch.load("./logs/"+run_name)["epoch"]
+        model_direct.load_state_dict(torch.load("./logs/models/"+run_name)["model"])
+        batch_size = torch.load("./logs/models/"+run_name)["batch_size"]
+        last_epoch = torch.load("./logs/models/"+run_name)["epoch"]
         
 
     training_set = H36_dataset(num_cams=num_cameras, subjectp=subjects[0:2], is_train = True) 
@@ -165,7 +165,7 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
     visualize_3d(y_v[0],y_hat_v[0],   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_test_a.png")
     visualize_3d(y_v[-1],y_hat_v[-1], "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_test_b.png")         
     
-    torch.save({'epoch' : epoch, 'batch_size':batch_size, 'model' : model_direct.state_dict(), 'optimizer': optimizer.state_dict() , 'scheduler': lr_schdlr.state_dict() },"./logs/"+(resume*"resumed_")+run_name)
+    torch.save({'epoch' : epoch, 'batch_size':batch_size, 'model' : model_direct.state_dict(), 'optimizer': optimizer.state_dict() , 'scheduler': lr_schdlr.state_dict() },"./logs/models/"+(resume*"resumed_")+run_name)
     
     return model_direct
 
@@ -173,7 +173,7 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
 def infer(run_name):
     
     model_direct= Model_3D().to(device)
-    model_direct.load_state_dict(torch.load("./logs/"+run_name)["model"])
+    model_direct.load_state_dict(torch.load("./logs/models/"+run_name)["model"])
     
     test_set     = H36_dataset(num_cams=num_cameras, subjectp=subjects[5:7] , is_train = False, action="Walking 1")
     test_loader = DataLoader(test_set, shuffle=True, batch_size=batch_size, num_workers=1)
@@ -250,9 +250,9 @@ if __name__ == "__main__":
         
         try:
             model = train(batch_size,n_epochs,lr,device,run_name,resume=Resume)
-            torch.save(model.state_dict(),"./logs/second_"+run_name)
+            torch.save(model.state_dict(),"./logs/models/second_"+run_name)
         except KeyboardInterrupt:
-                if CtlCSave: torch.save(model.state_dict(),"./logs/"+run_name)
+                if CtlCSave: torch.save(model.state_dict(),"./logs/models/interrupt_"+run_name)
         
         wandb.finish()
     
