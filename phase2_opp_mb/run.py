@@ -364,7 +364,6 @@ if __name__ == "__main__":
     print("___DONE___")
     
     
-    
 # python3 infer_wild.py \
 # --vid_path /home/rh/codes/MotionBERT/my_videos/trimmed_fall.mp4 \
 # --json_path /home/rh/codes/MotionBERT/my_videos/json_force_fall.json \

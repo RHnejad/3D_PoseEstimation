@@ -77,5 +77,6 @@ class Custom_video_dataset(Dataset):
 if __name__ == "__main__":
 
     data = Custom_video_dataset()
-    print(data.__len__())
-    print(data.__getitem__(-1))
+    print(data.poses.max(axis=0))
+    # print(data.__len__())
+    # print(data.__getitem__(-1))

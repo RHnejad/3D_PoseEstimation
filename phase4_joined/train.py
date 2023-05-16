@@ -8,6 +8,7 @@ from tqdm import tqdm
 import os
 from utils import visualize_3d, plot_losses
 import wandb
+from args import *
 Wandb = False
 
 def loss_MPJPE(prediction, target):
@@ -236,9 +237,9 @@ def infer(run_name):
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("DEVICE:",device)
-    batch_size = 64
+    batch_size = 32
     n_epochs= 10
-    lr = 0.005 #0.001
+    lr = 0.01 #0.001
     run_name = "test0"
     CtlCSave = False
     Resume = False
@@ -249,7 +250,7 @@ if __name__ == "__main__":
             os.mkdir(os.path.join("./logs/visualizations/", run_name))
             
         if Wandb:
-            wandb.init(project="Direct_3D_Pose",name=run_name, config={"learning_rate": lr, "architecture": "CNN","dataset": "H3.6","epochs": n_epochs,})
+            wandb.init(project="Phase4",name=run_name, config={"learning_rate": lr, "architecture": "CNN","dataset": "Custom","epochs": n_epochs,})
         
         try:
             model = train(batch_size,n_epochs,lr,device,run_name,resume=Resume)
