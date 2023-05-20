@@ -5,13 +5,13 @@ from torch.utils.data import Dataset
 from utils import camera_parameters, qv_mult
 import cv2
 
-systm = "laptop"  #izar,vita17,laptop
-act = "" #"Walking"
+systm = "vita17"  #izar,vita17,laptop
+act = "Walking" #"Walking"
 load_imgs = True
 from_videos = False
 
 zero_centre = True
-standardize_3d = True
+standardize_3d = False
 standardize_2d = False
 Normalize = True
 
@@ -19,6 +19,7 @@ sample = False
 Samples = np.random.randint(0,74872 if act=="Walk" else 389938, 200) #389938+135836=525774
 AllCameras = False
 CameraView = True 
+Mono_3d_file= True
 if AllCameras:
     CameraView = True
 MaxNormConctraint = False 
@@ -37,6 +38,7 @@ dataset_direcotories = {"izar":"/work/vita/datasets/h3.6", #/home/rhossein/venvs
 data_directory =  dataset_direcotories[systm]
 path_positions_2d_VD3d = data_directory + "/npz/data_2d_h36m.npz" #"data_2d_h36m_gt.npz" 
 path_positions_3d_VD3d =data_directory + "/npz/data_3d_h36m.npz"
+path_positions_3d_VD3d_mono =data_directory + "/npz/data_3d_h36m_mono.npz"
 
 
 subjects = ['S1', 'S5', 'S6', 'S7', 'S8', 'S9', 'S11']
@@ -164,7 +166,8 @@ class H36_dataset(Dataset):
                 for i in range(n_frames):
                     if Normalize:
                         # max_dataset, min_dataset = np.max(dataset, axis=0), np.min(dataset, axis=0)
-                        dataset[i] = np.divide(dataset[i]- min_train_3d, (max_train_3d-min_train_3d))
+                        # dataset[i] = np.divide(dataset[i]- min_train_3d, (max_train_3d-min_train_3d)) # map to 0 and 1
+                        pass
                     else:
                         dataset[i] = np.divide(dataset[i] - mean_train_3d, std_train_3d)
 
@@ -190,10 +193,13 @@ class H36_dataset(Dataset):
         
         cam_ids = [".54138969", ".55011271", ".58860488",  ".60457274" ]
 
-        data_file_3d = np.load(path_positions_3d_VD3d, allow_pickle=True)
+        if Mono_3d_file:
+            data_file_3d = np.load(path_positions_3d_VD3d_mono, allow_pickle=True)
+        else:
+            data_file_3d = np.load(path_positions_3d_VD3d, allow_pickle=True)
         data_file_2d = np.load(path_positions_2d_VD3d, allow_pickle=True)
 
-        data_file_3d = data_file_3d['positions_3d'].item()
+        data_file_3d = data_file_3d['positions_3d'+"_mono"*Mono_3d_file].item()
         data_file_2d = data_file_2d['positions_2d'].item()
 
         n_frame = 0 
@@ -202,9 +208,10 @@ class H36_dataset(Dataset):
                 if (action in a ) :
                     n_frame += len(data_file_3d[s][a])  
             
+        n_frame = n_frame + 3*int(not Mono_3d_file)*n_frame #would be 4*n_frame if Mono_3d_file is False
 
-        all_in_one_dataset_3d = np.zeros((4*n_frame if AllCameras else n_frame, 17 ,3),  dtype=np.float32)
-        all_in_one_dataset_2d = np.zeros((4*n_frame if AllCameras else n_frame, 17 ,2),  dtype=np.float32)
+        all_in_one_dataset_3d = np.zeros((n_frame if AllCameras else n_frame, 17 ,3),  dtype=np.float32)
+        all_in_one_dataset_2d = np.zeros((n_frame if AllCameras else n_frame, 17 ,2),  dtype=np.float32)
         video_and_frame_paths = []
         i = 0
         for s in subjects:
@@ -213,34 +220,49 @@ class H36_dataset(Dataset):
                     print(s,a,len(data_file_3d[s][a]))
                     for frame_num in range(len(data_file_3d[s][a])):
 
-                        global_pose = data_file_3d[s][a][frame_num]  
-                        global_pose = global_pose[ KeyPoints_from3d ,:] #only keeping the 16 or 17 keypoints we want
-
-                        for c in range(1+3*int(AllCameras)) :
-
-                            tmp = global_pose.copy()
-
-                            if CameraView:
-                                for j in range(len(tmp)): 
-                                    tmp[j] = tmp[j] - np.divide(np.array(camera_parameters[s][c]['translation']),1000)
-                                    tmp[j] = qv_mult(np.array(camera_parameters[s][c]['orientation']),tmp[j])
-                                        
-                            all_in_one_dataset_3d[i] = tmp
-
-                            tmp2 = data_file_2d[s][a+cam_ids[c]][frame_num]
-                            
+                        pose_3d = data_file_3d[s][a][frame_num]  
+                        pose_3d = pose_3d[ KeyPoints_from3d ,:] #only keeping the 16 or 17 keypoints we want
+                        
+                        if Mono_3d_file :
+                            all_in_one_dataset_3d[i] = pose_3d
+                            tmp2 = data_file_2d[s][a][frame_num]
                             all_in_one_dataset_2d[i] = tmp2[ KeyPoints_from3d ,:] #only keeping the 16 or 17 keypoints we want
-
+                            
                             if load_imgs:
                                 if from_videos:
-                                    video_and_frame_paths.append( [data_directory+"/videos/"+s+"/Videos/"+a+cam_ids[c]+".mp4",frame_num])
+                                    video_and_frame_paths.append( [data_directory+"/videos/"+s+"/Videos/"+a+".mp4",frame_num])
                                 else:
                                     if systm == "laptop":
-                                        video_and_frame_paths.append( ["/Users/rh/test_dir/h3.6/dataset/S1_frames/"+a+cam_ids[c]+".mp4/"+str(frame_num+1).zfill(4)+".jpg",frame_num])
+                                        video_and_frame_paths.append( ["/Users/rh/test_dir/h3.6/dataset/S1_frames/"+a+".mp4/"+str(frame_num+1).zfill(4)+".jpg",frame_num])
                                     else:
-                                        video_and_frame_paths.append( [data_directory+"/videos/"+s+"/outputVideos/"+a+cam_ids[c]+".mp4/"+str(frame_num+1).zfill(4)+".jpg",frame_num])
+                                        video_and_frame_paths.append( [data_directory+"/videos/"+s+"/outputVideos/"+a+".mp4/"+str(frame_num+1).zfill(4)+".jpg",frame_num])
 
                             i = i + 1 
+                            
+                        else :
+                            for c in range(1+3*int(AllCameras)) :
+                                tmp = pose_3d.copy()
+
+                                if CameraView:
+                                    for j in range(len(tmp)): 
+                                        tmp[j] = tmp[j] - np.divide(np.array(camera_parameters[s][c]['translation']),1000)
+                                        tmp[j] = qv_mult(np.array(camera_parameters[s][c]['orientation']),tmp[j])
+                                            
+                                all_in_one_dataset_3d[i] = tmp
+
+                                tmp2 = data_file_2d[s][a+cam_ids[c]][frame_num]    
+                                all_in_one_dataset_2d[i] = tmp2[ KeyPoints_from3d ,:] #only keeping the 16 or 17 keypoints we want
+
+                                if load_imgs:
+                                    if from_videos:
+                                        video_and_frame_paths.append( [data_directory+"/videos/"+s+"/Videos/"+a+cam_ids[c]+".mp4",frame_num])
+                                    else:
+                                        if systm == "laptop":
+                                            video_and_frame_paths.append( ["/Users/rh/test_dir/h3.6/dataset/S1_frames/"+a+cam_ids[c]+".mp4/"+str(frame_num+1).zfill(4)+".jpg",frame_num])
+                                        else:
+                                            video_and_frame_paths.append( [data_directory+"/videos/"+s+"/outputVideos/"+a+cam_ids[c]+".mp4/"+str(frame_num+1).zfill(4)+".jpg",frame_num])
+
+                                i = i + 1 
 
         
         return all_in_one_dataset_2d, all_in_one_dataset_3d , video_and_frame_paths
@@ -248,39 +270,49 @@ class H36_dataset(Dataset):
 
 if __name__ == "__main__" :
     
-    import matplotlib.pyplot as plt
- 
     all_in_one_dataset_2d, all_in_one_dataset_3d , video_and_frame_paths = H36_dataset.read_data(subjects=subjects[0:5])
-    
     for i in range(all_in_one_dataset_3d.shape[0]):
         all_in_one_dataset_3d[i,1:] = all_in_one_dataset_3d[i,1:] - all_in_one_dataset_3d[i,0]
         all_in_one_dataset_3d[i,0] *= 0 
+    print(all_in_one_dataset_3d.max(axis=0))
+    print(all_in_one_dataset_3d.min(axis=0))
+    breakpoint()
     
-    for dim in range(3):
-        fig, ax = plt.subplots()
-        for joint in range(1,17):
-            ax.hist(all_in_one_dataset_3d[:, joint, dim], bins=50, alpha=0.5, label=f"Joint {joint+1}")
-        ax.set_title(f"Histogram of All Joints in {['x', 'y', 'z'][dim]} Dimension")
-        ax.set_xlabel("Value")
-        ax.set_ylabel("Frequency")
-        ax.legend()
-        fig.savefig(f"all_joints_{['x', 'y', 'z'][dim]}.png")
-        plt.show()
+    #___
     
-    all_in_one_dataset_2d, all_in_one_dataset_3d , video_and_frame_paths = H36_dataset.read_data(subjects=subjects[5:7])
-    for i in range(all_in_one_dataset_3d.shape[0]):
-        all_in_one_dataset_3d[i,1:] = all_in_one_dataset_3d[i,1:] - all_in_one_dataset_3d[i,0]
-        all_in_one_dataset_3d[i,0] *= 0 
+    # import matplotlib.pyplot as plt
+ 
+    # all_in_one_dataset_2d, all_in_one_dataset_3d , video_and_frame_paths = H36_dataset.read_data(subjects=subjects[0:5])
+    
+    # for i in range(all_in_one_dataset_3d.shape[0]):
+    #     all_in_one_dataset_3d[i,1:] = all_in_one_dataset_3d[i,1:] - all_in_one_dataset_3d[i,0]
+    #     all_in_one_dataset_3d[i,0] *= 0 
+    
+    # for dim in range(3):
+    #     fig, ax = plt.subplots()
+    #     for joint in range(1,17):
+    #         ax.hist(all_in_one_dataset_3d[:, joint, dim], bins=50, alpha=0.5, label=f"Joint {joint+1}")
+    #     ax.set_title(f"Histogram of All Joints in {['x', 'y', 'z'][dim]} Dimension")
+    #     ax.set_xlabel("Value")
+    #     ax.set_ylabel("Frequency")
+    #     ax.legend()
+    #     fig.savefig(f"all_joints_{['x', 'y', 'z'][dim]}.png")
+    #     plt.show()
+    
+    # all_in_one_dataset_2d, all_in_one_dataset_3d , video_and_frame_paths = H36_dataset.read_data(subjects=subjects[5:7])
+    # for i in range(all_in_one_dataset_3d.shape[0]):
+    #     all_in_one_dataset_3d[i,1:] = all_in_one_dataset_3d[i,1:] - all_in_one_dataset_3d[i,0]
+    #     all_in_one_dataset_3d[i,0] *= 0 
         
-    for dim in range(3):
-        fig2, ax = plt.subplots()
-        for joint in range(1,17):
-            ax.hist(all_in_one_dataset_3d[:, joint, dim], bins=50, alpha=0.5, label=f"Joint {joint+1}")
-        ax.set_title(f"Histogram of All Joints in {['x', 'y', 'z'][dim]} Dimension")
-        ax.set_xlabel("Value")
-        ax.set_ylabel("Frequency")
-        ax.legend()
-        fig2.savefig(f"test_all_joints_{['x', 'y', 'z'][dim]}.png")
-        plt.show()
+    # for dim in range(3):
+    #     fig2, ax = plt.subplots()
+    #     for joint in range(1,17):
+    #         ax.hist(all_in_one_dataset_3d[:, joint, dim], bins=50, alpha=0.5, label=f"Joint {joint+1}")
+    #     ax.set_title(f"Histogram of All Joints in {['x', 'y', 'z'][dim]} Dimension")
+    #     ax.set_xlabel("Value")
+    #     ax.set_ylabel("Frequency")
+    #     ax.legend()
+    #     fig2.savefig(f"test_all_joints_{['x', 'y', 'z'][dim]}.png")
+    #     plt.show()
         
    

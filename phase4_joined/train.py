@@ -173,10 +173,10 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("DEVICE:",device)
-    batch_size = 2
-    n_epochs= 5
+    batch_size = 32
+    n_epochs= 10
     lr = 0.005 #0.001
-    run_name = "test0"
+    run_name = "yoga"
     CtlCSave = False
     Resume = False
     Train = True

@@ -32,6 +32,8 @@ def visualize_3d(keypoints,keypoints2, name="3d"):
     ax.axes.set_ylim3d(bottom=-1, top=1) 
     ax.axes.set_zlim3d(bottom=-1 , top=1 ) 
     
+    ax.view_init(elev=120, azim=60)
+    
     # ax.view_init(elev=70, azim=-30)
     
     plt.savefig(name)

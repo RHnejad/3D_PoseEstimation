@@ -354,7 +354,7 @@ def create_3d_mp4(video=None, fps=10):
 def run_openpifpaf_H36():
     
     subjects = ['S1', 'S5', 'S6', 'S7', 'S8', 'S9', 'S11']   
-    subjects = ['S1']   
+    subjects = ['S5']   
     # for s in subjects:
     #     "/data/rh-data/h3.6/videos/"+s+"/outputVideos/"+a+cam_ids[c]+".mp4/"+str(frame_num+1).zfill(4)+".jpg"  
         
@@ -392,6 +392,63 @@ def run_openpifpaf_H36():
             else :
                 print(f"{data_path} not a directroy")
 
+def save_to_json_H36():
+    outputs_directory = main_directory+"final_json_outputs/" 
+    inputs_directory = main_directory+"opp_outputs/"
+    
+    subjects_and = os.listdir(inputs_directory)
+    for s in subjects_and:
+        if "S" in s :
+            outputs_directory_sub = os.path.join(outputs_directory,s)
+            inputs_directory_sub = os.path.join(inputs_directory,s)
+            if not os.path.exists(outputs_directory_sub):
+                os.makedirs(outputs_directory_sub)
+                
+            actions = os.listdir(inputs_directory_sub)
+            
+            for action in actions:
+                joints_for_json = list()
+                
+                json_outputs_dir_path = os.path.join(inputs_directory_sub,action)
+                
+                if os.isdir(json_outputs_dir_path):
+                    directory = os.listdir(json_outputs_dir_path)
+                    directory.sort()
+                    for file_name in directory:
+                        if (file_name).endswith(".json"):
+                            joint_with_conf = np.zeros((17,3))
+                            with open(os.path.join(json_outputs_dir_path,file_name)) as f:
+                                data_json = json.load(f)
+                                max_score_id, max_score = 0, 0
+                                
+                                for j in range(len(data_json)):
+                                    if data_json[j]['score'] > max_score:
+                                        max_score = data_json[j]['score']
+                                        max_score_id = j
+                                        
+                                if len(data_json) > 0 :
+                                    joint_with_conf = np.array(data_json[max_score_id]["keypoints"]).reshape(17,3)
+                                    joint_with_conf[:,:2] = coco2h36m(joint_with_conf[:,:2])
+                                    # joint_with_conf[:,:2] = joint_with_conf[:,:2]/
+                                else:
+                                    print(data_json, file_name)
+                                    
+                            loop_temp_dict =  { "image_id": file_name, "category_id": 1, "keypoints":joint_with_conf.tolist() , "score":max_score  }
+                            # loop_temp_dict =  { "image_id": file_name, "category_id": 1, "keypoints":TEST[T*5].tolist() , "score":max_score  }
+                            # T = T+1
+
+                            joints_for_json.append(loop_temp_dict)
+                            
+                        # print(joints_for_json)    
+                        
+                    with open(os.path.join(outputs_directory_sub,action+'.json'), 'w') as handle:    
+                        json.dump(joints_for_json,handle)
+                else:
+                    print(f"{json_outputs_dir_path} not a directroy")        
+     
+                
+                
+        
       
 if __name__ == "__main__":
     

@@ -123,9 +123,9 @@ class Model_3D(nn.Module):
         coord_y = hm_y.sum(dim=2, keepdim=True)
         coord_z = hm_z.sum(dim=2, keepdim=True)
 
-        coord_x = coord_x / float(self.width_dim) #- 0.5
-        coord_y = coord_y / float(self.height_dim) #- 0.5
-        coord_z = coord_z / float(self.depth_dim) #- 0.5
+        coord_x = (coord_x / float(self.width_dim) - 0.5)*2
+        coord_y = (coord_y / float(self.height_dim) - 0.5)*2
+        coord_z = (coord_z / float(self.depth_dim) - 0.5)*2
         
         #  -0.5 ~ 0.5
         pred_uvd_jts_29 = torch.cat((coord_x, coord_y, coord_z), dim=2)

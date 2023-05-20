@@ -38,8 +38,8 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
         last_epoch = torch.load("./logs/models/"+run_name)["epoch"]
         
 
-    training_set = H36_dataset(num_cams=num_cameras, subjectp=subjects[0:2], is_train = True) 
-    test_set     = H36_dataset(num_cams=num_cameras, subjectp=subjects[0:2] , is_train = False)
+    training_set = H36_dataset(num_cams=num_cameras, subjectp=subjects[0:5], is_train = True) 
+    test_set     = H36_dataset(num_cams=num_cameras, subjectp=subjects[5:7] , is_train = False)
     
     train_loader = DataLoader( training_set, shuffle=True, batch_size=batch_size, num_workers= 1)
     test_loader = DataLoader(test_set, shuffle=True, batch_size=batch_size, num_workers=1)
@@ -235,14 +235,15 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("DEVICE:",device)
     batch_size = 64
-    n_epochs= 10
+    n_epochs= 20
     lr = 0.005 #0.001
-    run_name = "test and train the same (S1,S5)"
+    run_name = "may19"
     CtlCSave = False
     Resume = False
-    Train = False
+    Train = True
     
     if Train :
+        print("___"+run_name+"___")
         if not os.path.exists("./logs/visualizations/"+run_name):
             os.mkdir(os.path.join("./logs/visualizations/", run_name))
             
@@ -255,6 +256,7 @@ if __name__ == "__main__":
                 if CtlCSave: torch.save(model.state_dict(),"./logs/models/interrupt_"+run_name)
         
         wandb.finish()
+        print("___"+run_name+" DONE___")
     
     else: 
         infer(run_name)

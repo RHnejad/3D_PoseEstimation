@@ -30,11 +30,13 @@ output_dimension = 3
 num_of_joints = 17 #data = np.insert(data, 0 , values= [0,0,0], axis=0 )
 
 
+
+
 class Custom_video_dataset(Dataset):
-    def __init__(self, video = "yuzu"):
+    def __init__(self, video = "yoga"):
         
-        self.MP_npy_path = "../phase2_opp_mb/MB_npy"    
-        self.frames_path = "../phase2_opp_mb/ffmpeg_frames"
+        self.MP_npy_path = "/Users/rh/test_dir/3D_PoseEstimation/phase2_opp_mb/MB_npy"    
+        self.frames_path = "/Users/rh/test_dir/3D_PoseEstimation/phase2_opp_mb/ffmpeg_frames"
         
         self.frames=[]
         self.poses=[]
@@ -58,8 +60,10 @@ class Custom_video_dataset(Dataset):
                 self.poses[i,1:] = self.poses[i,1:] - self.poses[i,0]            
             self.poses[:,:1,:] *= 0
             
+        # self.poses *= 2
             
     def __len__(self):
+ 
         return len(self.frames)
         
     def __getitem__(self, idx):
@@ -67,10 +71,17 @@ class Custom_video_dataset(Dataset):
         frame = cv2.imread(self.frames[idx])
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         
-        frame = cv2.resize(frame, (256, 256))
-        frame = frame/256.0
+        s_0, s_1 =frame.shape[0], frame.shape[1]
+        l_min = min(s_0, s_1)
+        delta_0 = l_min/2
+        delta_1 = l_min/2
+    
+        frame_ = frame[  int(s_0/2-delta_0) : int(s_0/2+delta_0)  , int(s_1/2-delta_1) : int(s_1/2+delta_1) ,:]
+
+        frame_ = cv2.resize(frame_, (256, 256))
+        frame_ = frame_/256.0
         
-        return np.zeros((17,2)), self.poses[idx], frame
+        return np.zeros((17,2)), self.poses[idx], frame_
     
     
 if __name__ == "__main__":
