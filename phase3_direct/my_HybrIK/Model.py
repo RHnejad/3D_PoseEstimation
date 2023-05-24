@@ -23,11 +23,11 @@ class Model_3D(nn.Module):
         self._norm_layer = nn.BatchNorm2d
         
         #__________preact___________
-        self.preact = ResNet("resnet50") 
+        self.preact = ResNet("resnet101") 
         
         # Imagenet pretrain model
         import torchvision.models as tm   
-        x = tm.resnet50(pretrained=True)
+        x = tm.resnet101(pretrained=True)
         self.feature_channel = 2048
         
         model_state = self.preact.state_dict()

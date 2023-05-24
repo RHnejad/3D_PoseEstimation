@@ -9,7 +9,12 @@ import os
 from utils import visualize_3d, plot_losses
 import wandb
 from args import *
-Wandb = False
+
+import sys
+sys.path.append("../phase3_direct/my_HybrIK/")
+from H36_dataset import *
+    
+Wandb = 0
 
 def loss_MPJPE(prediction, target):
     
@@ -41,8 +46,11 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
         last_epoch = torch.load("./logs/"+run_name)["epoch"]
         
 
-    training_set = Custom_video_dataset() 
-    test_set     = Custom_video_dataset()
+    # training_set = Custom_video_dataset() 
+    # test_set     = Custom_video_dataset()
+    
+    training_set = H36_dataset(num_cams=num_cameras, subjectp=["S1"], is_train = True) 
+    test_set     = H36_dataset(num_cams=num_cameras, subjectp=["S11"] , is_train = False)
     
     train_loader = DataLoader( training_set, shuffle=True, batch_size=batch_size, num_workers= 1)
     val_loader = DataLoader(test_set, shuffle=True, batch_size=batch_size, num_workers=1)
@@ -145,6 +153,7 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
     
     #____test_____
     predicted_poses = []
+    gt_poses = []
     with torch.no_grad():
         model_direct.eval()
         
@@ -161,10 +170,12 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
             y_hat_t = y_hat_t.reshape(-1,num_of_joints,output_dimension)
             
             predicted_poses.append(y_hat_t.cpu().detach().numpy().flatten())
+            gt_poses.append(y_t.cpu().detach().numpy().flatten())
             
-    predicted_poses = np.array(predicted_poses).reshape((-1,17,3))
-    for i in range(predicted_poses.shape[0]):
-        visualize_3d(predicted_poses[i].copy(), predicted_poses[i].copy(), "./logs/visualizations/"+str(run_name)+"/"+str(i).zfill(4)+".png")
+    # predicted_poses = np.array(predicted_poses).reshape((-1,17,3))
+    # gt_poses = np.array(gt_poses).reshape((-1,17,3))
+    # for i in range(predicted_poses.shape[0]):
+    #     visualize_3d(gt_poses[i].copy(), predicted_poses[i].copy(), "./logs/visualizations/"+str(run_name)+"/"+str(i).zfill(4)+".png")
   
     return model_direct
 
@@ -173,17 +184,17 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("DEVICE:",device)
-    batch_size = 32
+    batch_size = 8
     n_epochs= 10
-    lr = 0.005 #0.001
-    run_name = "yoga"
+    lr = 0.001 #0.001
+    run_name = "yoga_vita17"
     CtlCSave = False
-    Resume = False
+    Resume = True
     Train = True
     
     if Train :
-        if not os.path.exists("./logs/visualizations/"+run_name):
-            os.mkdir(os.path.join("./logs/visualizations/", run_name))
+        if not os.path.exists("./logs/visualizations/"+(Resume*"resumed_")+run_name):
+            os.mkdir(os.path.join("./logs/visualizations/", (Resume*"resumed_")+run_name))
             
         if Wandb:
             wandb.init(project="Phase4",name=run_name, config={"learning_rate": lr, "architecture": "CNN","dataset": "Custom","epochs": n_epochs,})

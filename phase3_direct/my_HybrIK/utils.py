@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import cv2
 
 def visualize_3d(keypoints,keypoints2, name="3d"):
     
@@ -42,6 +43,38 @@ def visualize_3d(keypoints,keypoints2, name="3d"):
     plt.savefig(name)
     # plt.savefig("./"+run_num+"/"+name +'.png')
     # plt.show()
+
+def visualize_2d(keypoints,st_kp=None, frame=None, name = "kp"):
+    sk_points = [[0,1],[1,2],[2,3],[0,4],[4,5],[5,6],[5,6],[0,7],[7,8],[8,9],[9,10],[8,11],[11,12],[12,13],[8,14],[14,15],[15,16]]
+    
+    if keypoints.shape[0] != 17 :
+        keypoints = np.insert(keypoints , 0 , values= [0,0], axis=0 )
+        st_kp = np.insert(st_kp , 0 , values= [(st_kp[0,0]+st_kp[5,0])/2,(st_kp[0,1]+st_kp[5,1])/2], axis=0 )
+
+    plt.figure()
+
+    if 1 :
+        frame = cv2.resize(frame, dsize=(1000, 1000), interpolation=cv2.INTER_CUBIC)
+        keypoints[:,0] = keypoints[:,0] *1000
+        keypoints[:,1] = keypoints[:,1] *1000
+        st_kp[:,0] = st_kp[:,0] *1000
+        st_kp[:,1] = st_kp[:,1] *1000
+        plt.imshow(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+        print(keypoints,st_kp )
+
+    plt.plot(keypoints.T[0],keypoints.T[1], "og", markersize=3)
+    for i in range(17):
+        plt.plot(keypoints.T[0][sk_points[i]], keypoints.T[1][sk_points[i]],  "g" )
+    plt.plot(st_kp.T[0],st_kp.T[1], "or", markersize=3)
+    for i in range(17):
+        plt.plot(st_kp.T[0][sk_points[i]], st_kp.T[1][sk_points[i]],  "r" )
+
+    # plt.xlim([-1,1]), plt.ylim([1,-1])
+
+    plt.savefig(name)
+    
+    plt.close()
+
 
 
 def plot_heat_map(data):

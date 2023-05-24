@@ -4,15 +4,15 @@ import cv2
 import os
 
 
-systm = "laptop"  #izar,vita17,laptop
+systm = "vita17"  #izar,vita17,laptop
 act = "" #"Walking"
 load_imgs = True
 from_videos = False
 
 zero_centre = True
-standardize_3d = True
+standardize_3d = False
 standardize_2d = False
-Normalize = True
+Normalize = False
 
 sample = False
 Samples = np.random.randint(0,74872 if act=="Walk" else 389938, 200) #389938+135836=525774
@@ -22,7 +22,6 @@ if AllCameras:
     CameraView = True
 MaxNormConctraint = False 
 
-
 num_cameras = 1
 input_dimension = num_cameras*2
 output_dimension = 3
@@ -30,13 +29,11 @@ output_dimension = 3
 num_of_joints = 17 #data = np.insert(data, 0 , values= [0,0,0], axis=0 )
 
 
-
-
 class Custom_video_dataset(Dataset):
     def __init__(self, video = "yoga"):
         
-        self.MP_npy_path = "/Users/rh/test_dir/3D_PoseEstimation/phase2_opp_mb/MB_npy"    
-        self.frames_path = "/Users/rh/test_dir/3D_PoseEstimation/phase2_opp_mb/ffmpeg_frames"
+        self.MP_npy_path = "../phase2_opp_mb/MB_npy"    
+        self.frames_path = "../phase2_opp_mb/ffmpeg_frames"
         
         self.frames=[]
         self.poses=[]
@@ -57,14 +54,11 @@ class Custom_video_dataset(Dataset):
         
         if zero_centre:
             for i in range(self.len_dataset) :
-                self.poses[i,1:] = self.poses[i,1:] - self.poses[i,0]            
+                self.poses[i,1:,:] = self.poses[i,1:,:] - self.poses[i,0,:]            
             self.poses[:,:1,:] *= 0
-            
-        # self.poses *= 2
-            
+                        
     def __len__(self):
- 
-        return len(self.frames)
+        return self.len_dataset
         
     def __getitem__(self, idx):
         
