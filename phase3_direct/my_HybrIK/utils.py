@@ -60,7 +60,7 @@ def visualize_2d(keypoints,st_kp=None, frame=None, name = "kp"):
         st_kp[:,0] = st_kp[:,0] *1000
         st_kp[:,1] = st_kp[:,1] *1000
         plt.imshow(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-        print(keypoints,st_kp )
+        # print(keypoints,st_kp )
 
     plt.plot(keypoints.T[0],keypoints.T[1], "og", markersize=3)
     for i in range(17):

@@ -46,9 +46,12 @@ class TriangleLoss(torch.nn.Module):
         loss_3d = self.loss_function(predicted_3d, gt_3d) 
         loss_lift = self.loss_function(predicted_3d_lift, predicted_3d) 
         
-        return loss_2d + loss_3d + loss_lift
+        # print(loss_2d , loss_3d , loss_lift)
+        
+        return (loss_2d + loss_3d + 0.2*loss_lift)*10
     
     def report_losses(self):
+        print(self.loss_2d , self.loss_3d , self,loss_lift)
         return self.loss_2d, self.loss_3d, self.loss_lift
     
 
@@ -194,7 +197,7 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True):
                 y_hat_v = model_3d(frame_v)
                 y_hat_v = y_hat_v.reshape(-1,num_of_joints,3)
 
-                y_hat_v_lift = model_lift(x_hat_v)
+                y_hat_v_lift = model_lift(x_hat_v.clone().detach())
                 y_hat_v_lift = y_hat_v_lift.reshape(-1,num_of_joints,3)
 
                 loss_v = loss_function(predicted_2d = x_hat_v, predicted_3d = y_hat_v,
@@ -277,7 +280,7 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("DEVICE:",device)
     batch_size = 32
-    n_epochs= 10
+    n_epochs= 100
     lr = 0.001 #0.001
     run_name = "test"
     CtlCSave = False
