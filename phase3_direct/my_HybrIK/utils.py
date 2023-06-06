@@ -16,16 +16,16 @@ def visualize_3d(keypoints,keypoints2, name="3d"):
     xdata = keypoints.T[0]
     ydata = keypoints.T[1]
     zdata = keypoints.T[2]
-    ax.scatter(xdata,ydata,zdata,"b",label="gt")
+    ax.scatter(xdata,ydata,zdata,color = "lightseagreen",label="gt")
     for i in range(17):
-        ax.plot(xdata[sk_points[i]], ydata[sk_points[i]], zdata[sk_points[i]] , "b" )
+        ax.plot(xdata[sk_points[i]], ydata[sk_points[i]], zdata[sk_points[i]] , color = "turquoise" )
 
     xdata2 = keypoints2.T[0]
     ydata2 = keypoints2.T[1]
     zdata2 = keypoints2.T[2]
-    ax.scatter(xdata2,ydata2,zdata2, "r" , label ="pred")
+    ax.scatter(xdata2,ydata2,zdata2, color ="mediumvioletred" , label ="pred")
     for i in range(17):
-        ax.plot(xdata2[sk_points[i]], ydata2[sk_points[i]], zdata2[sk_points[i]] , "r" )
+        ax.plot(xdata2[sk_points[i]], ydata2[sk_points[i]], zdata2[sk_points[i]] , color = "palevioletred" )
 
     plt.legend(loc = 'upper left' )
 
@@ -59,15 +59,16 @@ def visualize_2d(keypoints,st_kp=None, frame=None, name = "kp"):
         keypoints[:,1] = keypoints[:,1] *1000
         st_kp[:,0] = st_kp[:,0] *1000
         st_kp[:,1] = st_kp[:,1] *1000
-        plt.imshow(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+        plt.imshow(frame)
+        # plt.imshow(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
         # print(keypoints,st_kp )
 
-    plt.plot(keypoints.T[0],keypoints.T[1], "og", markersize=3)
+    plt.plot(keypoints.T[0],keypoints.T[1], "o", color="lightseagreen", markersize=3)
     for i in range(17):
-        plt.plot(keypoints.T[0][sk_points[i]], keypoints.T[1][sk_points[i]],  "g" )
-    plt.plot(st_kp.T[0],st_kp.T[1], "or", markersize=3)
+        plt.plot(keypoints.T[0][sk_points[i]], keypoints.T[1][sk_points[i]], color = "turquoise" )
+    plt.plot(st_kp.T[0],st_kp.T[1], "o", color = "mediumvioletred", markersize=3)
     for i in range(17):
-        plt.plot(st_kp.T[0][sk_points[i]], st_kp.T[1][sk_points[i]],  "r" )
+        plt.plot(st_kp.T[0][sk_points[i]], st_kp.T[1][sk_points[i]], color = "palevioletred" )
 
     # plt.xlim([-1,1]), plt.ylim([1,-1])
 
@@ -95,7 +96,48 @@ def plot_heat_map(data):
     # show plot
 plt.show()
 
-
+h36m_cameras_intrinsic_params = [
+    {
+        'id': '54138969',
+        'center': [512.54150390625, 515.4514770507812],
+        'focal_length': [1145.0494384765625, 1143.7811279296875],
+        'radial_distortion': [-0.20709891617298126, 0.24777518212795258, -0.0030751503072679043],
+        'tangential_distortion': [-0.0009756988729350269, -0.00142447161488235],
+        'res_w': 1000,
+        'res_h': 1002,
+        'azimuth': 70, # Only used for visualization
+    },
+    {
+        'id': '55011271',
+        'center': [508.8486328125, 508.0649108886719],
+        'focal_length': [1149.6756591796875, 1147.5916748046875],
+        'radial_distortion': [-0.1942136287689209, 0.2404085397720337, 0.006819975562393665],
+        'tangential_distortion': [-0.0016190266469493508, -0.0027408944442868233],
+        'res_w': 1000,
+        'res_h': 1000,
+        'azimuth': -70, # Only used for visualization
+    },
+    {
+        'id': '58860488',
+        'center': [519.8158569335938, 501.40264892578125],
+        'focal_length': [1149.1407470703125, 1148.7989501953125],
+        'radial_distortion': [-0.2083381861448288, 0.25548800826072693, -0.0024604974314570427],
+        'tangential_distortion': [0.0014843869721516967, -0.0007599993259645998],
+        'res_w': 1000,
+        'res_h': 1000,
+        'azimuth': 110, # Only used for visualization
+    },
+    {
+        'id': '60457274',
+        'center': [514.9682006835938, 501.88201904296875],
+        'focal_length': [1145.5113525390625, 1144.77392578125],
+        'radial_distortion': [-0.198384091258049, 0.21832367777824402, -0.008947807364165783],
+        'tangential_distortion': [-0.0005872055771760643, -0.0018133620033040643],
+        'res_w': 1000,
+        'res_h': 1002,
+        'azimuth': -110, # Only used for visualization
+    },
+]
 
 
 camera_parameters =  {
@@ -269,11 +311,11 @@ def qv_mult(q1, v1):
 
 def plot_losses(epoch_losses,epoch_eval_loss,epoch_metric,epoch_eval_metric, run_name) :
 
-    plt.figure()
+    plt.figure(figsize=(20,6))
     plt.subplot(1, 2, 1)
 
-    plt.plot(epoch_losses)
-    plt.plot(epoch_eval_loss)
+    plt.plot(epoch_losses, color = "turquoise")
+    plt.plot(epoch_eval_loss, color = "palevioletred")
 
     plt.xlabel("epoch")
     plt.ylabel("MSE")
@@ -281,8 +323,8 @@ def plot_losses(epoch_losses,epoch_eval_loss,epoch_metric,epoch_eval_metric, run
     plt.legend(["training","validation"])
 
     plt.subplot(1, 2, 2)
-    plt.plot(epoch_metric)
-    plt.plot(epoch_eval_metric)
+    plt.plot(epoch_metric, color = "turquoise")
+    plt.plot(epoch_eval_metric, color = "palevioletred")
 
     plt.xlabel("epoch")
     plt.ylabel("MPJPE")

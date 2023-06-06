@@ -41,30 +41,49 @@ def generate_image():
 
 
 if __name__ == "__main__":
+    import sys
+    sys.path.append("/home/rh/codes/HybrIK/hybrik/models")
+    from simple3dposeBaseSMPL import Simple3DPoseBaseSMPL
+    from H36_dataset import *
+    from torch.utils.data import DataLoader
+    from utils import h36m_cameras_intrinsic_params
     
-    training_set = H36_dataset(num_cams=num_cameras, subjectp=subjects[0:1], is_train = True) 
-    test_set     = H36_dataset(num_cams=num_cameras, subjectp=subjects[0:1] , is_train = False)
+    training_set = H36_dataset(num_cams=num_cameras, subjectp=["S1"], is_train = True) 
+    train_loader = DataLoader( training_set, shuffle=True, batch_size=1, num_workers= 1)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print("DEVICE:",device)
+    x,y,f, r_cam_id = next(iter(train_loader))
+    center = h36m_cameras_intrinsic_params[r_cam_id]['center']
+    f = f.float().to(device)
+    model = Simple3DPoseBaseSMPL().to(device)
     
-    batch_size=64
+    breakpoint()
 
-    train_loader = DataLoader( training_set, shuffle=True, batch_size=batch_size, num_workers= 1)
-    test_loader = DataLoader(test_set, shuffle=True, batch_size=batch_size, num_workers=1)
+# if __name__ == "__main__":
     
-    x = generate_image()
+    # training_set = H36_dataset(num_cams=num_cameras, subjectp=subjects[0:1], is_train = True) 
+    # test_set     = H36_dataset(num_cams=num_cameras, subjectp=subjects[0:1] , is_train = False)
     
-    d2d, d3d, frame = training_set.__getitem__(300)
-    
-    print(frame.shape)
-    # frame =  torch.from_numpy(frame.transpose((2, 0, 1))).float() / 255.0
-    frame =  torch.from_numpy(frame)
-    frame = frame.unsqueeze(0)
-    print(frame.shape)
-    # breakpoint()
+    # batch_size=64
 
-    model= Model_3D()
+    # train_loader = DataLoader( training_set, shuffle=True, batch_size=batch_size, num_workers= 1)
+    # test_loader = DataLoader(test_set, shuffle=True, batch_size=batch_size, num_workers=1)
+    
+    # x = generate_image()
+    
+    # d2d, d3d, frame = training_set.__getitem__(300)
+    
+    # print(frame.shape)
+    # # frame =  torch.from_numpy(frame.transpose((2, 0, 1))).float() / 255.0
+    # frame =  torch.from_numpy(frame)
+    # frame = frame.unsqueeze(0)
+    # print(frame.shape)
+    # # breakpoint()
+
+    # model= Model_3D()
      
-    # y= model(x)
-    y2 = model(frame)
+    # # y= model(x)
+    # y2 = model(frame)
     
-    # print(x.shape,y.shape)
-    print(frame.shape,y2.shape)
+    # # print(x.shape,y.shape)
+    # print(frame.shape,y2.shape)

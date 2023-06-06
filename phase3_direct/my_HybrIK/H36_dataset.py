@@ -49,7 +49,7 @@ KeyPoints_from3d_to_delete = [4,5,9,10,11,16,20,21,22,23,24,28,29,30,31]
 
 
 class H36_dataset(Dataset):
-    def __init__(self, num_cams = 1, subjectp=subjects , action=act, transform=None, target_transform=None, is_train = True):
+    def __init__(self, num_cams = 1, subjectp=subjects , action=act, transform=None, target_transform=None, is_train = True, split_rate=None):
         
         self.cam_ids = [".54138969", ".55011271", ".58860488",  ".60457274" ]
 
@@ -61,13 +61,19 @@ class H36_dataset(Dataset):
         self.target_transform = target_transform
         self.num_cams = num_cams
         self.is_train = is_train
+        self.split_rate = split_rate
 
         self.frame =  np.zeros((1000,1002,3))
         
     def __len__(self):
+        if self.split_rate:
+            return int( len(self.dataset3d) / self.split_rate)
         return len(self.dataset3d) #number of all the frames 
 
     def __getitem__(self, idx):
+        
+        if self.split_rate:
+            idx = self.split_rate*idx
 
         if load_imgs:
             if from_videos:     
@@ -78,15 +84,20 @@ class H36_dataset(Dataset):
             else :
                 self.frame = cv2.imread(self.video_and_frame_paths[idx][0])
                 self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
-
-            
+                
         keypoints_2d = self.dataset2d[idx].reshape(-1 ,2)
 
         #resising the image for Resnet
         self.frame = cv2.resize(self.frame, (256, 256))
         self.frame = self.frame/256.0
+        
+        cam_ids = [".54138969", ".55011271", ".58860488",  ".60457274" ]
+        for k in range(4):
+            if cam_ids[k] in self.video_and_frame_paths[idx][0]:
+                r_cam_id = k
+            
 
-        return keypoints_2d, self.dataset3d[idx], self.frame #cam 0 
+        return keypoints_2d, self.dataset3d[idx], self.frame, r_cam_id #cam 0 
 
         
     def process_data(self, dataset , sample=sample, is_train = True, standardize = False, z_c = zero_centre) :

@@ -15,9 +15,9 @@ class Model_2D(nn.Module):
         super(Model_2D, self).__init__()
         
         #_________
-        self.deconv_dim = [256,256,256] # kwargs['NUM_DECONV_FILTERS']
+        self.deconv_dim = [256,256,256] # kwargs['NUM_DECONV_FILTERS'] num of chanels for each conv2Dtranspose layer
         self.num_joints = 17 #kwargs['NUM_JOINTS']
-        self.depth_dim = 1 #kwargs['EXTRA']['DEPTH_DIM']
+        self.depth_dim = 1 #kwargs['EXTRA']['DEPTH_DIM'] 64 for 3D and 1 for 2D
         self.norm_type = 'softmax'
         self.height_dim = 64
         self.width_dim = 64
@@ -25,11 +25,11 @@ class Model_2D(nn.Module):
         self._norm_layer = nn.BatchNorm2d
         
         #__________preact___________
-        self.preact = ResNet("resnet101") 
+        self.preact = ResNet("resnet50") 
         
         # Imagenet pretrain model
         import torchvision.models as tm   
-        x = tm.resnet101(pretrained=True)
+        x = tm.resnet50(pretrained=True)
         self.feature_channel = 2048
         
         model_state = self.preact.state_dict()
@@ -103,8 +103,7 @@ class Model_2D(nn.Module):
         heatmaps = out / out.sum(dim=2, keepdim=True) #out.sum is 1 if softmax so not actually needed
         
         heatmaps = heatmaps.reshape((heatmaps.shape[0], self.num_joints, self.depth_dim, self.height_dim, self.width_dim))
-        
-        
+         
         hm_x = heatmaps.sum((2, 3))
         hm_y = heatmaps.sum((2, 4))
         # hm_z = heatmaps.sum((3, 4))

@@ -85,7 +85,7 @@ def qv_mult(q1, v1):
 
 def read_data(subjects = subjects, action = "", is_train=True):
 
-    cam_ids = [".54138969", ".55011271", ".58860488",  ".60457274", ]
+    cam_ids = [".54138969", ".55011271", ".58860488",  ".60457274" ]
 
 
     data_file_3d = np.load(path_positions_3d_VD3d, allow_pickle=True)
