@@ -16,9 +16,9 @@ def visualize_3d(keypoints,keypoints2, name="3d"):
     xdata = keypoints.T[0]
     ydata = keypoints.T[1]
     zdata = keypoints.T[2]
-    ax.scatter(xdata,ydata,zdata,color = "lightseagreen",label="gt")
+    ax.scatter(xdata,ydata,zdata,color = "turquoise",label="gt")
     for i in range(17):
-        ax.plot(xdata[sk_points[i]], ydata[sk_points[i]], zdata[sk_points[i]] , color = "turquoise" )
+        ax.plot(xdata[sk_points[i]], ydata[sk_points[i]], zdata[sk_points[i]] , color = "darkturquoise" )
 
     xdata2 = keypoints2.T[0]
     ydata2 = keypoints2.T[1]
@@ -63,9 +63,9 @@ def visualize_2d(keypoints,st_kp=None, frame=None, name = "kp"):
         # plt.imshow(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
         # print(keypoints,st_kp )
 
-    plt.plot(keypoints.T[0],keypoints.T[1], "o", color="lightseagreen", markersize=3)
+    plt.plot(keypoints.T[0],keypoints.T[1], "o", color="turquoise", markersize=3)
     for i in range(17):
-        plt.plot(keypoints.T[0][sk_points[i]], keypoints.T[1][sk_points[i]], color = "turquoise" )
+        plt.plot(keypoints.T[0][sk_points[i]], keypoints.T[1][sk_points[i]], color = "darkturquoise" )
     plt.plot(st_kp.T[0],st_kp.T[1], "o", color = "mediumvioletred", markersize=3)
     for i in range(17):
         plt.plot(st_kp.T[0][sk_points[i]], st_kp.T[1][sk_points[i]], color = "palevioletred" )
@@ -314,16 +314,16 @@ def plot_losses(epoch_losses,epoch_eval_loss,epoch_metric,epoch_eval_metric, run
     plt.figure(figsize=(20,6))
     plt.subplot(1, 2, 1)
 
-    plt.plot(epoch_losses, color = "turquoise")
+    plt.plot(epoch_losses, color = "darkturquoise")
     plt.plot(epoch_eval_loss, color = "palevioletred")
 
     plt.xlabel("epoch")
-    plt.ylabel("MSE")
+    plt.ylabel("Loss")
 
     plt.legend(["training","validation"])
 
     plt.subplot(1, 2, 2)
-    plt.plot(epoch_metric, color = "turquoise")
+    plt.plot(epoch_metric, color = "darkturquoise")
     plt.plot(epoch_eval_metric, color = "palevioletred")
 
     plt.xlabel("epoch")
@@ -333,3 +333,27 @@ def plot_losses(epoch_losses,epoch_eval_loss,epoch_metric,epoch_eval_metric, run
     
     plt.savefig(run_name+"/plot_metric.pdf")
     plt.show()
+   
+   
+    
+import copy
+def flip_pose(data):
+    N, J, D = data.shape #new
+    """
+    This function is from MotionBERT and modified
+    horizontal flip
+        data: [N, F, 17, D] or [F, 17, D]. X (horizontal coordinate) is the first channel in D.
+    Return
+        result: same
+    """
+    left_joints = [4, 5, 6, 11, 12, 13]
+    right_joints = [1, 2, 3, 14, 15, 16]
+    # flipped_data = copy.deepcopy(data) new
+    flipped_data =  data.clone()
+    if D==2: #new
+        flipped_data[..., 0] = 1 - flipped_data[..., 0]  # flip x of all joints
+    elif D==3:
+        flipped_data[..., 0] *= -1 # flip x of all joints
+        
+    flipped_data[..., left_joints+right_joints, :] = flipped_data[..., right_joints+left_joints, :]
+    return flipped_data

@@ -49,7 +49,7 @@ KeyPoints_from3d_to_delete = [4,5,9,10,11,16,20,21,22,23,24,28,29,30,31]
 
 
 class H36_dataset(Dataset):
-    def __init__(self, num_cams = 1, subjectp=subjects , action=act, transform=None, target_transform=None, is_train = True, split_rate=None):
+    def __init__(self, subjectp=subjects , action=act, transform=None, target_transform=None, is_train = True, split_rate=None):
         
         self.cam_ids = [".54138969", ".55011271", ".58860488",  ".60457274" ]
 
@@ -59,11 +59,10 @@ class H36_dataset(Dataset):
 
         self.transform = transform
         self.target_transform = target_transform
-        self.num_cams = num_cams
         self.is_train = is_train
         self.split_rate = split_rate
 
-        self.frame =  np.zeros((1000,1002,3))
+        # self.frame =  np.zeros((1000,1002,3))
         
     def __len__(self):
         if self.split_rate:
@@ -73,31 +72,29 @@ class H36_dataset(Dataset):
     def __getitem__(self, idx):
         
         if self.split_rate:
-            idx = self.split_rate*idx
+            idx = self.split_rate * idx
 
         if load_imgs:
             if from_videos:     
                 cap = cv2.VideoCapture(self.video_and_frame_paths[idx][0])
                 cap.set(cv2.CAP_PROP_POS_FRAMES, self.video_and_frame_paths[idx][1]) 
-                res, self.frame = cap.read()
-                self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
+                res, frame = cap.read()
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             else :
-                self.frame = cv2.imread(self.video_and_frame_paths[idx][0])
-                self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
+                frame = cv2.imread(self.video_and_frame_paths[idx][0])
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 
         keypoints_2d = self.dataset2d[idx].reshape(-1 ,2)
 
         #resising the image for Resnet
-        self.frame = cv2.resize(self.frame, (256, 256))
-        self.frame = self.frame/256.0
+        frame = cv2.resize(frame, (256, 256))
+        frame = frame/256.0
         
-        cam_ids = [".54138969", ".55011271", ".58860488",  ".60457274" ]
         for k in range(4):
-            if cam_ids[k] in self.video_and_frame_paths[idx][0]:
+            if self.cam_ids[k] in self.video_and_frame_paths[idx][0]:
                 r_cam_id = k
             
-
-        return keypoints_2d, self.dataset3d[idx], self.frame, r_cam_id #cam 0 
+        return keypoints_2d, self.dataset3d[idx], frame, r_cam_id 
 
         
     def process_data(self, dataset , sample=sample, is_train = True, standardize = False, z_c = zero_centre) :
@@ -113,20 +110,17 @@ class H36_dataset(Dataset):
             data_sum = np.sum(dataset, axis=0)
             data_mean = np.divide(data_sum, n_frames)
 
-
             diff_sq2_sum =np.zeros((n_joints,dim))
             for i in range(n_frames):
                 diff_sq2_sum += np.power( dataset[i]-data_mean ,2)
             data_std = np.divide(diff_sq2_sum, n_frames)
             data_std = np.sqrt(data_std)
 
-            
             if dim == 2:
                 with open("./logs/run_time_utils/mean_train_2d.npy","wb") as f:
                     np.save(f, data_mean)
                 with open("./logs/run_time_utils/std_train_2d.npy","wb") as f:
                     np.save(f, data_std)  
-
 
             elif dim == 3:
                 with open("./logs/run_time_utils/mean_train_3d.npy","wb") as f:
@@ -143,7 +137,6 @@ class H36_dataset(Dataset):
                     temp_min = np.ones((num_of_joints,3)) * -1
                     np.save(f, temp_min ) 
 
-
         if dim == 2:
             with open("./logs/run_time_utils/mean_train_2d.npy","rb") as f:
                 mean_train_2d = np.load(f)
@@ -159,7 +152,6 @@ class H36_dataset(Dataset):
                 max_train_3d =np.load(f)  
             with open("./logs/run_time_utils/min_train_3d.npy","rb") as f:
                 min_train_3d = np.load(f)  
-
 
         if standardize :
             if dim == 2 :

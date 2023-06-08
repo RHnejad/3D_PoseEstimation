@@ -38,8 +38,8 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
         last_epoch = torch.load("./logs/models/"+run_name)["epoch"]
         
 
-    training_set = H36_dataset(num_cams=num_cameras, subjectp=subjects[0:5], is_train = True) 
-    test_set     = H36_dataset(num_cams=num_cameras, subjectp=subjects[5:7] , is_train = False)
+    training_set = H36_dataset(subjectp=subjects[0:1], is_train = True, action="1.6", split_rate=50)
+    test_set     = H36_dataset(subjectp=subjects[6:7] , is_train = False,  action="1.6", split_rate=20)
     
     train_loader = DataLoader( training_set, shuffle=True, batch_size=batch_size, num_workers= 1)
     test_loader = DataLoader(test_set, shuffle=True, batch_size=batch_size, num_workers=1)
@@ -67,7 +67,7 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
             
             optimizer.zero_grad()
 
-            x, y, frame  = batch
+            x, y, frame, _  = batch
             
             x,y=x.float(),y.float()
             x, y = x.to(device), y.to(device) 
@@ -113,7 +113,7 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
             val_loss = 0.0
             val_metric = torch.zeros(num_of_joints).to(device)
             
-            for x_v, y_v, frame_v  in test_loader:
+            for x_v, y_v, frame_v, _  in test_loader:
                 
                 x_v,y_v=x_v.float(),y_v.float()
                 x_v, y_v = x_v.to(device), y_v.to(device)
@@ -175,7 +175,7 @@ def infer(run_name):
     model_direct= Model_3D().to(device)
     model_direct.load_state_dict(torch.load("./logs/models/"+run_name)["model"])
     
-    test_set     = H36_dataset(num_cams=num_cameras, subjectp=subjects[5:7] , is_train = False, action="Walking 1")
+    test_set     = H36_dataset(num_cams=num_cameras, subjectp=subjects[5:7] , is_train = False, action="")
     test_loader = DataLoader(test_set, shuffle=True, batch_size=batch_size, num_workers=1)
  
     mean_train_3d, std_train_3d = load_statisctics("mean_train_3d"), load_statisctics("std_train_3d")
@@ -237,7 +237,7 @@ if __name__ == "__main__":
     batch_size = 16
     n_epochs= 50
     lr = 0.001 #0.001
-    run_name = "resnet101_may23"
+    run_name = "june_8"
     CtlCSave = False
     Resume = False
     Train = True

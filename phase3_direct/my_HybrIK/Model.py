@@ -23,11 +23,11 @@ class Model_3D(nn.Module):
         self._norm_layer = nn.BatchNorm2d
         
         #__________preact___________
-        self.preact = ResNet("resnet101") 
+        self.preact = ResNet("resnet50") 
         
         # Imagenet pretrain model
         import torchvision.models as tm   
-        x = tm.resnet101(pretrained=True)
+        x = tm.resnet50(pretrained=True)
         self.feature_channel = 2048
         
         model_state = self.preact.state_dict()
@@ -127,7 +127,7 @@ class Model_3D(nn.Module):
         coord_y = (coord_y / float(self.height_dim) - 0.5)*2
         coord_z = (coord_z / float(self.depth_dim) - 0.5)*2
         
-        #  -0.5 ~ 0.5
+        #  -0.5 ~ 0.5 0-1
         pred_uvd_jts_29 = torch.cat((coord_x, coord_y, coord_z), dim=2)
 
         pred_uvd_jts_29_flat = pred_uvd_jts_29.reshape((batch_size, self.num_joints * 3)) 
