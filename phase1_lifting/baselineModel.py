@@ -93,6 +93,40 @@ class LinearModel(torch.nn.Module):
         return y
 
 #_____MINE_____
+class MLP(torch.nn.Module):
+    def __init__(self, input_dim=3, output_dim=2, n_joints=17 ):
+        super().__init__()
+         
+        self.input_dim = input_dim *n_joints
+        self.output_dim = output_dim *n_joints
+
+        self.encoder = torch.nn.Sequential(
+            torch.nn.Flatten(),
+
+            torch.nn.Linear(self.input_dim, 64),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(0.3),
+
+            torch.nn.Linear(64, 32),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(0.3),
+
+            torch.nn.Linear(32, 32),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(0.3),
+
+            torch.nn.Linear(32, self.output_dim),          
+        )
+  
+    def forward(self, inp):
+        outp = self.encoder2(inp)
+        return outp
+#______ 
+
+
+
+
+
 class AE(torch.nn.Module):
     def __init__(self, input_dim=2, output_dim=3, n_joints=17 ):
         super().__init__()

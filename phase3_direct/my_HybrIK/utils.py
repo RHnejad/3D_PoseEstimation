@@ -338,7 +338,8 @@ def plot_losses(epoch_losses,epoch_eval_loss,epoch_metric,epoch_eval_metric, run
     
 import copy
 def flip_pose(data):
-    N, J, D = data.shape #new
+    
+    shape = data.shape #new is N,J,D for tensores and J,D in getitem
     """
     This function is from MotionBERT and modified
     horizontal flip
@@ -349,10 +350,14 @@ def flip_pose(data):
     left_joints = [4, 5, 6, 11, 12, 13]
     right_joints = [1, 2, 3, 14, 15, 16]
     # flipped_data = copy.deepcopy(data) new
-    flipped_data =  data.clone()
-    if D==2: #new
+    if len(shape)==3: #it means its a tensor in trainig loop
+        flipped_data =  data.clone()
+    elif len(shape)==2:
+        flipped_data =  data.copy()
+    
+    if shape[-1] == 2: #new
         flipped_data[..., 0] = 1 - flipped_data[..., 0]  # flip x of all joints
-    elif D==3:
+    elif shape[-1] == 3:
         flipped_data[..., 0] *= -1 # flip x of all joints
         
     flipped_data[..., left_joints+right_joints, :] = flipped_data[..., right_joints+left_joints, :]

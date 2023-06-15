@@ -37,7 +37,7 @@ class Model_3D(nn.Module):
         self.preact.load_state_dict(model_state)
            
         #________deconv_layers______
-        self.deconv_layers = self._make_deconv_layer()
+        self.deconv_layers = self._make_deconv_layer_with_dropout()
         
         #________final_layer________
         self.final_layer = nn.Conv2d(
@@ -68,6 +68,33 @@ class Model_3D(nn.Module):
 
         return nn.Sequential(*deconv_layers)
     
+    def _make_deconv_layer_with_dropout(self):
+        deconv_layers = []
+        deconv1 = nn.ConvTranspose2d(
+            self.feature_channel, self.deconv_dim[0], kernel_size=4, stride=2, padding=int(4 / 2) - 1, bias=False)
+        bn1 = self._norm_layer(self.deconv_dim[0])
+        deconv2 = nn.ConvTranspose2d(
+            self.deconv_dim[0], self.deconv_dim[1], kernel_size=4, stride=2, padding=int(4 / 2) - 1, bias=False)
+        bn2 = self._norm_layer(self.deconv_dim[1])
+        deconv3 = nn.ConvTranspose2d(
+            self.deconv_dim[1], self.deconv_dim[2], kernel_size=4, stride=2, padding=int(4 / 2) - 1, bias=False)
+        bn3 = self._norm_layer(self.deconv_dim[2])
+
+        deconv_layers.append(deconv1)
+        deconv_layers.append(bn1)
+        deconv_layers.append(nn.ReLU(inplace=True))
+        deconv_layers.append(nn.Dropout2d(p=0.5))
+        deconv_layers.append(deconv2)
+        deconv_layers.append(bn2)
+        deconv_layers.append(nn.ReLU(inplace=True))
+        deconv_layers.append(nn.Dropout2d(p=0.5))
+        deconv_layers.append(deconv3)
+        deconv_layers.append(bn3)
+        deconv_layers.append(nn.ReLU(inplace=True))
+        deconv_layers.append(nn.Dropout2d(p=0.5))
+
+        return nn.Sequential(*deconv_layers)
+    
 
     def norm_heatmap(self, norm_type, heatmap ):
         # Input tensor shape: [N,C,...]
@@ -85,7 +112,7 @@ class Model_3D(nn.Module):
         batch_size = x.shape[0]
     
         #new
-        x = torch.permute(x, (0,3,1,2))
+        # x = torch.permute(x, (0,3,1,2))
     
         x0 = self.preact(x)
         out = self.deconv_layers(x0)

@@ -87,7 +87,7 @@ class Model_2D(nn.Module):
         batch_size = x.shape[0]
     
         #new
-        x = torch.permute(x, (0,3,1,2))
+        # x = torch.permute(x, (0,3,1,2))
     
         x0 = self.preact(x)
         out = self.deconv_layers(x0)
@@ -138,6 +138,35 @@ class Model_2D(nn.Module):
         
         return pred_uvd_jts_29_flat
     
+class Projection(torch.nn.Module):
+    def __init__(self, input_dim=3, output_dim=2, n_joints=17 ):
+        super().__init__()
+         
+        self.input_dim = input_dim *n_joints
+        self.output_dim = output_dim *n_joints
+
+        self.mlp = torch.nn.Sequential(
+            torch.nn.Flatten(),
+
+            torch.nn.Linear(self.input_dim, 64),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(0.3),
+
+            torch.nn.Linear(64, 32),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(0.3),
+
+            torch.nn.Linear(32, 32),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(0.3),
+
+            torch.nn.Linear(32, self.output_dim),          
+        )
+  
+    def forward(self, inp):
+        outp = self.mlp(inp)
+        return outp
+#______ 
     
     
 if __name__ == "__main__" :

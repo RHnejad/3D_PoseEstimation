@@ -2,8 +2,9 @@
 
 import numpy as np
 from torch.utils.data import Dataset
-from utils import camera_parameters, qv_mult
+from utils import camera_parameters, qv_mult, flip_pose
 import cv2
+import albumentations as A
 
 systm = "vita17"  #izar,vita17,laptop
 act = "Walking" #"Walking"
@@ -13,7 +14,7 @@ from_videos = False
 zero_centre = True
 standardize_3d = False
 standardize_2d = False
-Normalize = True
+Normalize = False
 
 sample = False
 Samples = np.random.randint(0,74872 if act=="Walk" else 389938, 200) #389938+135836=525774
@@ -52,27 +53,40 @@ class H36_dataset(Dataset):
     def __init__(self, subjectp=subjects , action=act, transform=None, target_transform=None, is_train = True, split_rate=None):
         
         self.cam_ids = [".54138969", ".55011271", ".58860488",  ".60457274" ]
+        
+        self.split_rate = split_rate
 
         self.dataset2d, self.dataset3d, self.video_and_frame_paths = self.read_data(subjects= subjectp,action=action,is_train = is_train)
+        
+        if self.split_rate:
+            self.dataset2d = self.dataset2d[::split_rate]
+            self.dataset3d = self.dataset3d[::split_rate]
+            self.video_and_frame_paths = self.video_and_frame_paths[::split_rate]
+        
         self.dataset2d = self.process_data(self.dataset2d,  sample = False if len(subjectp)==2 else sample, is_train = is_train, standardize=standardize_2d, z_c = False)
         self.dataset3d = self.process_data(self.dataset3d,  sample = False if len(subjectp)==2 else sample, is_train = is_train, standardize=standardize_3d, z_c = True)
 
         self.transform = transform
         self.target_transform = target_transform
         self.is_train = is_train
-        self.split_rate = split_rate
+        
+        self.is_train = is_train
+        
+        # self.shift = A.Compose([A.Shift(p=1, shift_limit=0.2, scale_limit=0.25,
+        #                                                                    rotate_limit=45, interpolation=cv2.INTER_LINEAR,
+        #                                                                    border_mode=cv2.BORDER_CONSTANT, value=0)],
+        #                        p=1, keypoint_params=A.KeypointParams(format='yx', remove_invisible=False))
+        # self.scale = A.Compose([A.Shift(p=1, shift_limit=0.2, scale_limit=0.25,
+        #                                                                    rotate_limit=45, interpolation=cv2.INTER_LINEAR,
+        #                                                                    border_mode=cv2.BORDER_CONSTANT, value=0)],
+        #                        p=1, keypoint_params=A.KeypointParams(format='yx', remove_invisible=False))
+        # self.rotate = 
 
-        # self.frame =  np.zeros((1000,1002,3))
         
     def __len__(self):
-        if self.split_rate:
-            return int( len(self.dataset3d) / self.split_rate)
         return len(self.dataset3d) #number of all the frames 
 
     def __getitem__(self, idx):
-        
-        if self.split_rate:
-            idx = self.split_rate * idx
 
         if load_imgs:
             if from_videos:     
@@ -83,9 +97,33 @@ class H36_dataset(Dataset):
             else :
                 frame = cv2.imread(self.video_and_frame_paths[idx][0])
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                
+                                   
         keypoints_2d = self.dataset2d[idx].reshape(-1 ,2)
-
+        keypoints_3d = self.dataset3d[idx]
+   
+        
+        #augmentation
+        # if self.is_train:
+        #     if np.random.sample() < 1 and zero_centre: #translate
+        #         pass
+        #         # shift_scale = np.random.sample()-0.5
+        #         # self.dataset2d[idx] = self.dataset2d[idx] + shift_scale*((0.02))
+        #         # # frame[int(shift_scale*1000): ,int(shift_scale*1000): ] = cv2.
+                
+        #         # breakpoint()
+                
+        #     if np.random.sample() < 0.1 : #rotate
+        #         pass
+                
+        #     if np.random.sample() < 0.1 : #scale
+        #         pass 
+        
+        #     if np.random.sample() < 0.5  :  #flip
+        #         frame = cv2.flip(frame,1)
+        #         self.dataset2d[idx] = flip_pose(self.dataset2d[idx])
+        #         self.dataset3d[idx] = flip_pose(self.dataset3d[idx])
+                
+        
         #resising the image for Resnet
         frame = cv2.resize(frame, (256, 256))
         frame = frame/256.0
@@ -94,7 +132,9 @@ class H36_dataset(Dataset):
             if self.cam_ids[k] in self.video_and_frame_paths[idx][0]:
                 r_cam_id = k
             
-        return keypoints_2d, self.dataset3d[idx], frame, r_cam_id 
+        return keypoints_2d, keypoints_3d, frame, r_cam_id 
+
+        
 
         
     def process_data(self, dataset , sample=sample, is_train = True, standardize = False, z_c = zero_centre) :
@@ -272,6 +312,9 @@ class H36_dataset(Dataset):
 
 
 if __name__ == "__main__" :
+    
+    training_set = H36_dataset(subjectp=subjects[0:5], is_train = True, action="Posing", split_rate=81) 
+    training_set.__getitem__(0)
     
     all_in_one_dataset_2d, all_in_one_dataset_3d , video_and_frame_paths = H36_dataset.read_data(subjects=subjects[0:5])
     for i in range(all_in_one_dataset_3d.shape[0]):

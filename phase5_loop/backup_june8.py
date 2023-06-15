@@ -1,6 +1,5 @@
 import numpy as np
 import torch
-import torchvision.transforms as T
 import cv2
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -8,7 +7,7 @@ import os
 import wandb
 WandB = False
 
-from Model_2d import Model_2D, Projection
+from Model_2d import Model_2D
 
 import sys
 sys.path.append("../phase3_direct/my_HybrIK/")
@@ -32,77 +31,17 @@ def load_statisctics(file_name):
 
 
 class TriangleLoss(torch.nn.Module):
-    def __init__(self, Project = False):
+    def __init__(self):
         super(TriangleLoss, self).__init__()
-        
-        self.Project = Project
-        
-        self.loss_2d = []
-        self.loss_3d = []
-        self.loss_lift = []
-        self.loss_proj = []
-               
-        self.loss_function = torch.nn.L1Loss()
-        # self.loss_function = torch.nn.MSELoss()
-
-    def forward(self, predicted_2d, predicted_3d, lift_2d_gt, lift_2d_pred , gt_2d, gt_3d , proj_3d_pred=None, proj_3d_gt=None):
-        
-        loss_2d_ = self.loss_function(predicted_2d, gt_2d) 
-        loss_3d_ = self.loss_function(predicted_3d, gt_3d)
-         
-        # domain_gap_loss = self.loss_function(lift_2d_pred, lift_2d_gt)
-        loss_lift = self.loss_function(lift_2d_pred, predicted_3d)
-        
-        if self.Project:
-            try:
-                proj_3d_pred[1:] -= proj_3d_pred[0]
-                # proj_3d_gt[1:] -= proj_3d_gt[0]
-                predicted_2d_ = predicted_2d.clone()
-                predicted_2d_[1:] -= predicted_2d_[0]
-                
-                # loss_gap_proj = self.loss_function(proj_3d_pred, proj_3d_gt)  
-                loss_proj = self.loss_function(proj_3d_pred, predicted_2d_)
-            except:
-                breakpoint()
-             
-            returned_loss = loss_2d_ + loss_3d_ + loss_lift + loss_proj 
-        else:
-            returned_loss = loss_2d_ + loss_3d_ + loss_lift
-            
-        self.loss_2d.append(loss_2d_.cpu().item())
-        self.loss_3d.append(loss_3d_.cpu().item())
-        self.loss_lift.append(loss_lift.cpu().item())
-        self.loss_proj.append(loss_proj.cpu().item())
-        
-        return returned_loss, loss_2d_
-    
-    def report_losses(self):
-        print(sum(self.loss_2d)/len(self.loss_2d) , sum(self.loss_3d)/len(self.loss_3d) ,
-              sum(self.loss_lift)/len(self.loss_lift) )
-        
         self.loss_2d = []
         self.loss_3d = []
         self.loss_lift = []
         self.loss_domain_gap = []
-
-
-class TriangleLoss_sep(torch.nn.Module):
-    def __init__(self, Project = False):
-        super(TriangleLoss, self).__init__()
         
-        self.Project = Project
-        
-        self.loss_2d = []
-        self.loss_3d = []
-        self.loss_lift = []
-        self.loss_domain_gap = []
-        self.loss_proj = []
-        self.loss_gap_proj = [] 
-               
         self.loss_function = torch.nn.L1Loss()
         # self.loss_function = torch.nn.MSELoss()
 
-    def forward(self, predicted_2d, predicted_3d, lift_2d_gt, lift_2d_pred , gt_2d, gt_3d , proj_3d_pred=None, proj_3d_gt=None):
+    def forward(self, predicted_2d, predicted_3d, lift_2d_gt, lift_2d_pred , gt_2d, gt_3d):
         
         loss_2d_ = self.loss_function(predicted_2d, gt_2d) 
         loss_3d_ = self.loss_function(predicted_3d, gt_3d)
@@ -110,37 +49,18 @@ class TriangleLoss_sep(torch.nn.Module):
         domain_gap_loss = self.loss_function(lift_2d_pred, lift_2d_gt)
         loss_lift = self.loss_function(lift_2d_gt, gt_3d)
         
-        if self.Project:
-            try:
-                proj_3d_pred[1:] -= proj_3d_pred[0]
-                proj_3d_gt[1:] -= proj_3d_gt[0]
-                gt_2d_c = gt_2d.clone()
-                gt_2d_c[1:] -= gt_2d_c[0]
-                
-                loss_gap_proj = self.loss_function(proj_3d_pred, proj_3d_gt)  
-                loss_proj = self.loss_function(proj_3d_gt, gt_2d_c)
-            except:
-                breakpoint()
-             
-            returned_loss = loss_2d_ + loss_3d_ + loss_lift + domain_gap_loss + loss_proj + loss_gap_proj
-        else:
-            returned_loss = loss_2d_ + loss_3d_ + loss_lift + domain_gap_loss
-            
         self.loss_2d.append(loss_2d_.cpu().item())
         self.loss_3d.append(loss_3d_.cpu().item())
         self.loss_lift.append(loss_lift.cpu().item())
-        self.loss_domain_gap.append(domain_gap_loss.cpu().item())
-        
-        return returned_loss
+        self.loss_domain_gap.append(domain_gap_loss)
+        # print(loss_2d_ , loss_3d_ , loss_lift_)
+        # breakpoint()
+        return (loss_2d_ + loss_3d_ + loss_lift + domain_gap_loss)
     
     def report_losses(self):
-        print(sum(self.loss_2d)/len(self.loss_2d) , sum(self.loss_3d)/len(self.loss_3d) ,
-              sum(self.loss_lift)/len(self.loss_lift), sum(self.loss_domain_gap)/len(self.loss_domain_gap))
-        
-        self.loss_2d = []
-        self.loss_3d = []
-        self.loss_lift = []
-        self.loss_domain_gap = []            
+        print(self.loss_2d[-1] , self.loss_3d[-1] , self.loss_lift[-1], self.loss_domain_gap[-1])
+        return self.loss_2d, self.loss_3d, self.loss_lift
+    
 
 def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Flip=False, Project = False):
     
@@ -149,20 +69,18 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
     model_3d= Model_3D().to(device)
     model_lift = LinearModel(i_dim=num_of_joints*input_dimension, o_dim=num_of_joints*output_dimension,p_dropout=0.5, linear_size=1024).to(device)
     if Project:
-        model_proj = Projection().to(device)
+        model_proj = LinearModel(i_dim=num_of_joints*3, o_dim=num_of_joints*2,p_dropout=0.5, linear_size=64).to(device)
     
     if Triangle:
-        loss_function = TriangleLoss(Project)
+        loss_function = TriangleLoss()
     else:
         loss_function = torch.nn.L1Loss()
         # loss_function = torch.nn.MSELoss(reduction = "mean")
         
     
-    optimizer_2d = torch.optim.Adam(model_2d.parameters(),lr = lr)#, weight_decay=1e-8 
-    optimizer_3d = torch.optim.Adam(model_3d.parameters(),lr = lr)
-    optimizer_lift = torch.optim.Adam(model_lift.parameters(),lr = lr)
-    if Project:
-        optimizer_proj = torch.optim.Adam(model_proj.parameters(),lr = lr)
+    optimizer_2d = torch.optim.AdamW(model_2d.parameters(),lr = lr)#, weight_decay=1e-8 
+    optimizer_3d = torch.optim.AdamW(model_3d.parameters(),lr = lr)
+    optimizer_lift = torch.optim.AdamW(model_lift.parameters(),lr = lr)
     
     # lr_schdlr = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer_3d, factor=0.7, patience=3, cooldown=2, min_lr=5e-6, verbose=True )
     
@@ -171,8 +89,9 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
         batch_size = torch.load("./logs/models/"+run_name)["batch_size"]
         last_epoch = torch.load("./logs/models/"+run_name)["epoch"]
         
-    training_set = H36_dataset(subjectp=subjects[0:5], is_train = True, action="Posing", split_rate=64) #new
-    test_set     = H36_dataset(subjectp=subjects[5:7] , is_train = False, action="Posing", split_rate=64)
+
+    training_set = H36_dataset(subjectp=subjects[0:1], is_train = True, action="1.6", split_rate=50) #new
+    test_set     = H36_dataset(subjectp=subjects[6:7] , is_train = False, action="1.6", split_rate=20)
     
     train_loader = DataLoader( training_set, shuffle=True, batch_size=batch_size, num_workers= 2, prefetch_factor=2)
     test_loader = DataLoader(test_set, shuffle=False, batch_size=batch_size, num_workers=2, prefetch_factor=2)
@@ -197,16 +116,12 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
         model_2d.train()
         model_3d.train()
         model_lift.train()
-        if Project: model_proj.train()
-            
             
         for batch in tqdm(train_loader, desc=f"Epoch {epoch+1} in training", leave=True, position=0):
 
             optimizer_3d.zero_grad()
             optimizer_2d.zero_grad()
             optimizer_lift.zero_grad()
-            if Project:
-                optimizer_proj.zero_grad()
 
             y1, y2, frame, _  = batch
             current_batch_size = y1.shape[0]
@@ -215,22 +130,16 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
             y1, y2 = y1.to(device), y2.to(device) 
             frame = frame.float()
             frame =frame.to(device)
-            frame = torch.permute(frame, (0,3,1,2))
                            
             y1_hat = model_2d(frame).reshape(current_batch_size,num_of_joints,2)   
             y2_hat = model_3d(frame).reshape(current_batch_size,num_of_joints,3)
             if Triangle:
                 lift_2d_pred = model_lift(y1_hat).reshape(current_batch_size,num_of_joints,3)
                 lift_2d_gt = model_lift(y1).reshape(current_batch_size,num_of_joints,3)
-                
-                if Project: 
-                    proj_3d_pred = model_proj(y2_hat).reshape(current_batch_size,num_of_joints,2)
-                    proj_3d_gt = model_proj(y2).reshape(current_batch_size,num_of_joints,2)
             
             if Flip:
-                               
+                #FLIP: flip_pose
                 frame = torch.flip(frame, (3,))
-
                 y1 = flip_pose(y1)
                 
                 y1_hat = (flip_pose(model_2d(frame).reshape(current_batch_size,num_of_joints,2))+y1_hat)/2
@@ -239,15 +148,6 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
                 if Triangle:
                     lift_2d_pred = (flip_pose(model_lift(y1_hat).reshape(current_batch_size,num_of_joints,3))+lift_2d_pred)/2
                     lift_2d_gt = (flip_pose(model_lift(y1).reshape(current_batch_size,num_of_joints,3))+lift_2d_gt)/2
-                    
-                    if Project: 
-                        
-                        y2 = flip_pose(y2)
-                        
-                        proj_3d_pred = (flip_pose(model_proj(y2_hat).reshape(current_batch_size,num_of_joints,2))+proj_3d_pred)/2
-                        proj_3d_gt =  (flip_pose(model_proj(y2).reshape(current_batch_size,num_of_joints,2))+proj_3d_gt)/2
-                        
-                        y2 = flip_pose(y2)
  
                 #flip back
                 frame = torch.flip(frame, (3,))
@@ -255,18 +155,11 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
                     
     
             if Triangle: 
-                
-                if Project:
-                    loss, loss_2d_ = loss_function(predicted_2d = y1_hat, predicted_3d = y2_hat,
-                                lift_2d_gt = lift_2d_gt, lift_2d_pred=lift_2d_pred,
-                                gt_2d = y1, gt_3d = y2, proj_3d_pred = proj_3d_pred.clone() , proj_3d_gt = proj_3d_gt.clone())
-                else:                    
-                    #predicted_2d, predicted_3d, lift_2d_gt, lift_2d_pred , gt_2d, gt_3d
-                    loss, loss_2d_ = loss_function(predicted_2d = y1_hat, predicted_3d = y2_hat,
+                #predicted_2d, predicted_3d, lift_2d_gt, lift_2d_pred , gt_2d, gt_3d
+                loss = loss_function(predicted_2d = y1_hat, predicted_3d = y2_hat,
                                      lift_2d_gt = lift_2d_gt, lift_2d_pred=lift_2d_pred,
                                      gt_2d = y1, gt_3d = y2)
                 loss.backward()  
-            
             else :
                 loss_2d = loss_function(y1_hat, y1) 
                 loss_3d = loss_function(y2_hat, y2) 
@@ -275,14 +168,10 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
                 loss_2d.backward()
                 loss_3d.backward()
 
-
-
             optimizer_2d.step()
             optimizer_3d.step()
             if Triangle:
                 optimizer_lift.step()
-                if Project:
-                    optimizer_proj.step()
             
             if Triangle:
                 train_loss += loss.cpu().item() / len(train_loader)
@@ -298,7 +187,8 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
         # lr_schdlr.step(loss) #fix this for both 2d and 3d
         
         epoch_losses.append(train_loss)
-        epoch_metric.append(train_metric_3d.cpu().item())
+        epoch_metric.append(train_metric_3d.cpu().item() )
+        
         
         #________________validation_______________________  
         with torch.no_grad():
@@ -306,11 +196,8 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
             model_2d.eval()
             model_3d.eval()
             model_lift.eval()
-            if Project:
-                model_proj.eval()
             
             val_loss = 0.0
-            val_2d_loss = 0.0
             val_metric_3d = torch.zeros(num_of_joints).to(device)
             
             for y1_v, y2_v, frame_v, _  in test_loader:
@@ -322,58 +209,35 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
                 
                 frame_v = frame_v.float()
                 frame_v =frame_v.to(device)
-                frame_v = torch.permute(frame_v, (0,3,1,2))
                 
                 y1_hat_v = model_2d(frame_v).reshape(current_batch_size,17,2)
+
                 y2_hat_v = model_3d(frame_v).reshape(current_batch_size,17,3)
 
                 if Triangle:
                     lift_2d_pred_v = model_lift(y1_hat_v).reshape(current_batch_size,17,3)
                     lift_2d_gt_v = model_lift(y1_v).reshape(current_batch_size,17,3)
-                    
-                    if Project:
-                        proj_3d_pred_v = model_proj(y2_hat_v).reshape(current_batch_size,17,2)
-                        proj_3d_gt_v = model_proj(y2_v).reshape(current_batch_size,17,2)
-                    
-                    
+                
                 if Flip:
                     #flip
                     frame_v = torch.flip(frame_v, (3,))
                     y1_v = flip_pose(y1_v)
                     
-                    y1_hat_v = (flip_pose(model_2d(frame_v).reshape(current_batch_size,17,2)) + y1_hat_v) /2
-                    y2_hat_v = (flip_pose(model_3d(frame_v).reshape(current_batch_size,17,3)) + y2_hat_v) /2
+                    y1_hat_v = (flip_pose(model_2d(frame_v).reshape(current_batch_size,17,2))+y1_hat_v)/2
+                    y2_hat_v =  (flip_pose(model_3d(frame_v).reshape(current_batch_size,17,3))+y2_hat_v)/2
                     
                     if Triangle:
-                        lift_2d_pred_v = (flip_pose(model_lift(y1_hat_v).reshape(current_batch_size,17,3)) + lift_2d_pred_v) /2
-                        lift_2d_gt_v = (flip_pose(model_lift(y1_v).reshape(current_batch_size,17,3)) + lift_2d_gt_v) /2
-                        
-                        if Project:
-                            
-                            y2_v = flip_pose(y2_v)
-                            
-                            proj_3d_pred_v = (flip_pose(model_proj(y2_hat_v).reshape(current_batch_size,17,2)) + proj_3d_pred_v  )/2
-                            proj_3d_gt_v = (flip_pose(model_proj(y2_v).reshape(current_batch_size,17,2)) +  proj_3d_gt_v  )/2
-                            
-                            #flip back
-                            y2_v = flip_pose(y2_v)
-                                
+                        lift_2d_pred_v = (flip_pose(model_lift(y1_hat_v).reshape(current_batch_size,17,3))+lift_2d_pred_v)/2
+                        lift_2d_gt_v = (flip_pose(model_lift(y1_v).reshape(current_batch_size,17,3))+lift_2d_gt_v)/2
     
                     #flip back
                     frame_v = torch.flip(frame_v, (3,))
                     y1_v = flip_pose(y1_v)
-                    
-                
+
                 if Triangle:
-                    if Project:
-                        loss_v, loss_2d_v = loss_function(predicted_2d = y1_hat_v, predicted_3d = y2_hat_v,
-                                        lift_2d_gt = lift_2d_gt_v , lift_2d_pred = lift_2d_pred_v,
-                                        gt_2d = y1_v, gt_3d = y2_v,  proj_3d_pred = proj_3d_pred_v.clone() , proj_3d_gt = proj_3d_gt_v.clone() )
-                        
-                    else:
-                        loss_v, loss_2d_v  = loss_function(predicted_2d = y1_hat_v, predicted_3d = y2_hat_v,
-                                        lift_2d_gt = lift_2d_gt_v , lift_2d_pred = lift_2d_pred_v,
-                                        gt_2d = y1_v, gt_3d = y2_v)
+                    loss_v = loss_function(predicted_2d = y1_hat_v, predicted_3d = y2_hat_v,
+                                    lift_2d_gt = lift_2d_gt_v , lift_2d_pred = lift_2d_pred_v,
+                                    gt_2d = y1_v, gt_3d = y2_v)
                 else :
                     loss_2d_v = loss_function(y1_hat_v, y1_v) 
                     
@@ -381,7 +245,6 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
             
                 if Triangle:
                     val_loss += loss_v.cpu().item() / len(test_loader)
-                    val_2d_loss += loss_2d_v.cpu().item() / len(test_loader)
                 else:
                     val_loss += loss_2d_v.cpu().item() / len(test_loader)
                 val_metric_3d += (metric_v_3d / len(test_set))
@@ -399,7 +262,6 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
         if Triangle:
             print("___losses___")   
             loss_function.report_losses()
-            print("val_2d_loss:", val_2d_loss)
  
         print(f"epoch {epoch+1}/{n_epochs} loss(train): {train_loss:.4f} , MPJPE(train):{train_metric_3d.cpu().item()}, loss(val.): {val_loss}, MPJPE(val.){val_metric_3d.cpu().item()}") 
         
@@ -420,7 +282,6 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
     
     y1 = y1.cpu().detach().numpy().reshape(-1, num_of_joints,2)
     y1_hat = y1_hat.cpu().detach().numpy().reshape(-1, num_of_joints,2)
-    frame = torch.permute(frame, (0,2,3,1))
     frame = frame.cpu().detach().numpy()
     visualize_2d(y1[0],y1_hat[0],frame[0],   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"2d_train_a.png")
     visualize_2d(y1[-1],y1_hat[-1],frame[-1], "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"2d_train_b.png")     
@@ -443,7 +304,6 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
     
     y1_v = y1_v.cpu().detach().numpy().reshape(-1, num_of_joints,2)
     y1_hat_v = y1_hat_v.cpu().detach().numpy().reshape(-1, num_of_joints,2)
-    frame_v = torch.permute(frame_v, (0,2,3,1))
     frame_v = frame_v.cpu().detach().numpy()
     visualize_2d(y1_v[0],y1_hat_v[0],frame_v[0],   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"2d_test_a.png")
     visualize_2d(y1_v[-1],y1_hat_v[-1],frame_v[-1], "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"2d_test_b.png")            
@@ -453,25 +313,21 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
     
     return model_2d, model_3d, model_lift
 
-def custom():
-    pass
-
         
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("DEVICE:",device)
     batch_size = 32
-    n_epochs= 500
-    lr = 0.003 
-    run_name = "test_jun15"
+    n_epochs= 100
+    lr = 0.001 
+    run_name = "test_jun6"
     
     CtlCSave = False
     Resume = False
     Train = True
-    
-    Triangle = 1
-    Flip = 0
-    Project = 1
+    Triangle = False
+    Flip = True
+    Project = False
     
     if Train :
         print("___"+run_name+"___")
