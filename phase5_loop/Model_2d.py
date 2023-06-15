@@ -129,7 +129,6 @@ class Model_2D(nn.Module):
         coord_y = (coord_y / float(self.height_dim) - 0.5)*2
         # coord_z = (coord_z / float(self.depth_dim) - 0.5)*2
         
-        #  -0.5 ~ 0.5
         pred_uvd_jts_29 = torch.cat((coord_x, coord_y), dim=2)
 
         pred_uvd_jts_29_flat = pred_uvd_jts_29.reshape((batch_size, self.num_joints * 2)) 

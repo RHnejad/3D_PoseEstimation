@@ -37,7 +37,8 @@ class Model_3D(nn.Module):
         self.preact.load_state_dict(model_state)
            
         #________deconv_layers______
-        self.deconv_layers = self._make_deconv_layer_with_dropout()
+        # self.deconv_layers = self._make_deconv_layer_with_dropout()
+        self.deconv_layers = self._make_deconv_layer()
         
         #________final_layer________
         self.final_layer = nn.Conv2d(

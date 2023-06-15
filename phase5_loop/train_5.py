@@ -8,6 +8,8 @@ import os
 import wandb
 WandB = False
 
+# ln -s /data2/rh-data/h3.6/Images   /home/rh/codes/EpipolarPose/data/h36m/images
+
 from Model_2d import Model_2D, Projection
 
 import sys
@@ -164,15 +166,19 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
     if Project:
         optimizer_proj = torch.optim.Adam(model_proj.parameters(),lr = lr)
     
-    # lr_schdlr = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer_3d, factor=0.7, patience=3, cooldown=2, min_lr=5e-6, verbose=True )
+    lr_schdlr_3d = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer_3d, factor=0.7, patience=3, cooldown=2, min_lr=5e-6, verbose=True )
+    lr_schdlr_2d = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer_2d, factor=0.7, patience=3, cooldown=2, min_lr=5e-6, verbose=True )
+    lr_schdlr_lift = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer_lift, factor=0.7, patience=3, cooldown=2, min_lr=5e-6, verbose=True )
+    lr_schdlr_proj = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer_proj, factor=0.7, patience=3, cooldown=2, min_lr=5e-6, verbose=True )
+
     
     if resume:
         model_2d.load_state_dict(torch.load("./logs/models/"+run_name)["model"])
         batch_size = torch.load("./logs/models/"+run_name)["batch_size"]
         last_epoch = torch.load("./logs/models/"+run_name)["epoch"]
         
-    training_set = H36_dataset(subjectp=subjects[0:5], is_train = True, action="Posing", split_rate=64) #new
-    test_set     = H36_dataset(subjectp=subjects[5:7] , is_train = False, action="Posing", split_rate=64)
+    training_set = H36_dataset(subjectp=subjects[0:5], is_train = True, action="", split_rate=81) #new
+    test_set     = H36_dataset(subjectp=subjects[5:7] , is_train = False, action="", split_rate=64)
     
     train_loader = DataLoader( training_set, shuffle=True, batch_size=batch_size, num_workers= 2, prefetch_factor=2)
     test_loader = DataLoader(test_set, shuffle=False, batch_size=batch_size, num_workers=2, prefetch_factor=2)
@@ -295,7 +301,13 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
         if num_of_joints==17 and zero_centre:
                 train_metric_3d *= (17/16)*1000
                 
-        # lr_schdlr.step(loss) #fix this for both 2d and 3d
+        lr_schdlr_3d.step(loss) #fix this for both 2d and 3d
+        lr_schdlr_2d.step(loss) 
+        if Triangle:
+            lr_schdlr_lift.step(loss) 
+            if Project:
+                lr_schdlr_proj.step(loss) 
+        
         
         epoch_losses.append(train_loss)
         epoch_metric.append(train_metric_3d.cpu().item())
@@ -408,13 +420,14 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
         
     y2 = y2.cpu().detach().numpy().reshape(-1, num_of_joints,output_dimension)
     y2_hat = y2_hat.cpu().detach().numpy().reshape(-1, num_of_joints,output_dimension)
-    visualize_3d(y2[0],y2_hat[0],   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_train_a.png")
-    visualize_3d(y2[-1],y2_hat[-1], "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_train_b.png")
+    visualize_3d(y2[0].copy(),y2_hat[0].copy(),   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_train_a.png")
+    visualize_3d(y2[-1].copy(),y2_hat[-1].copy(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_train_b.png")
         
     try:    
         lift_2d_pred = lift_2d_pred.cpu().detach().numpy().reshape(-1, num_of_joints,output_dimension)
-        visualize_3d(y2[0],lift_2d_pred[0],   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_lift_train_a.png")
-        visualize_3d(y2[-1],lift_2d_pred[-1], "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_lift_train_b.png") 
+        visualize_3d(y2[0].copy(),lift_2d_pred[0].copy(),   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_lift_train_a.png")
+        visualize_3d(y2[-1].copy(),lift_2d_pred[-1].copy(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_lift_train_b.png") 
+        
     except:
         print("NO 2D to 3D LIFTING RESULTS TO PLOT")   
     
@@ -422,8 +435,16 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
     y1_hat = y1_hat.cpu().detach().numpy().reshape(-1, num_of_joints,2)
     frame = torch.permute(frame, (0,2,3,1))
     frame = frame.cpu().detach().numpy()
-    visualize_2d(y1[0],y1_hat[0],frame[0],   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"2d_train_a.png")
-    visualize_2d(y1[-1],y1_hat[-1],frame[-1], "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"2d_train_b.png")     
+    visualize_2d(y1[0].copy(),y1_hat[0].copy(),frame[0].copy(),   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"2d_train_a.png")
+    visualize_2d(y1[-1].copy(),y1_hat[-1].copy(),frame[-1].copy(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"2d_train_b.png")     
+    
+    try:
+        proj_3d_pred = proj_3d_pred.cpu().detach().numpy().reshape(-1, num_of_joints,2)
+        visualize_2d(y1[0].copy(),proj_3d_pred[0].copy(),  frame[0].copy(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_proj_train_a.png")
+        visualize_2d(y1[-1].copy(),proj_3d_pred[-1].copy(),frame[-1].copy(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_proj_train_b.png") 
+        
+    except:
+        print("NO 3D to 2D PROJECTION RESULTS TO PLOT") 
     
     plot_losses(epoch_losses,epoch_val_loss,epoch_metric,epoch_val_metric,"./logs/visualizations/"+(resume*"resumed_")+run_name)
     
@@ -436,8 +457,9 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
     
     try:
         lift_2d_pred_v = lift_2d_pred_v.cpu().detach().numpy().reshape(-1, num_of_joints,output_dimension)
-        visualize_3d(y2_v[0],lift_2d_pred_v[0],   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_lift_test_a.png")
-        visualize_3d(y2_v[-1],lift_2d_pred_v[-1], "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_lift_test_b.png")
+        visualize_3d(y1_v[0],lift_2d_pred_v[0],   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_lift_test_a.png")
+        visualize_3d(y1_v[-1],lift_2d_pred_v[-1], "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_lift_test_b.png")
+        
     except:
         print("NO 2D to 3D LIFTING RESULTS TO PLOT") 
     
@@ -445,9 +467,17 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
     y1_hat_v = y1_hat_v.cpu().detach().numpy().reshape(-1, num_of_joints,2)
     frame_v = torch.permute(frame_v, (0,2,3,1))
     frame_v = frame_v.cpu().detach().numpy()
-    visualize_2d(y1_v[0],y1_hat_v[0],frame_v[0],   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"2d_test_a.png")
-    visualize_2d(y1_v[-1],y1_hat_v[-1],frame_v[-1], "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"2d_test_b.png")            
+    visualize_2d(y1_v[0].copy(),y1_hat_v[0].copy(),frame_v[0].copy(),   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"2d_test_a.png")
+    visualize_2d(y1_v[-1].copy(),y1_hat_v[-1].copy(),frame_v[-1].copy(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"2d_test_b.png")            
     
+    try:
+        proj_3d_pred_v = proj_3d_pred_v.cpu().detach().numpy().reshape(-1, num_of_joints,2)
+        visualize_2d(y1_v[0].copy(),proj_3d_pred_v[0].copy(),  frame_v[0].copy(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_proj_test_a.png")
+        visualize_2d(y1_v[-1].copy(),proj_3d_pred_v[-1].copy(),frame_v[-1].copy(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_proj_test_b.png") 
+        
+    except:
+        print("NO 3D to 2D PROJECTION RESULTS TO PLOT") 
+        
     #, 'scheduler': lr_schdlr.state_dict()
     torch.save({'epoch' : epoch, 'batch_size':batch_size, 'model' : model_2d.state_dict(), 'optimizer': optimizer_2d.state_dict()  },"./logs/models/"+(resume*"resumed_")+run_name)
     
@@ -462,8 +492,8 @@ if __name__ == "__main__":
     print("DEVICE:",device)
     batch_size = 32
     n_epochs= 500
-    lr = 0.003 
-    run_name = "test_jun15"
+    lr = 0.007
+    run_name = "june_16_tr_pr"
     
     CtlCSave = False
     Resume = False
@@ -488,6 +518,6 @@ if __name__ == "__main__":
         #         if CtlCSave: torch.save(model.state_dict(),"./logs/models/interrupt_"+run_name)
         
         if WandB:
-            wandb.finish()
+            wandb.finish() 
             
         print("___"+run_name+" DONE___")
