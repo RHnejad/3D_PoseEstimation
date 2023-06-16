@@ -11,6 +11,8 @@ WandB = False
 # ln -s /data2/rh-data/h3.6/Images   /home/rh/codes/EpipolarPose/data/h36m/images
 
 from Model_2d import Model_2D, Projection
+from losses import loss_MPJPE, TriangleLoss, TriangleLoss_sep    
+from visualize  import visualize
 
 import sys
 sys.path.append("../phase3_direct/my_HybrIK/")
@@ -19,13 +21,8 @@ from Model import Model_3D
 from H36_dataset import *
 
 sys.path.append("../phase1_lifting/")
-from baselineModel import LinearModel
+from baselineModel import LinearModel, MyViT
 
-def loss_MPJPE(prediction, target):
-    B,J,d =  target.shape
-    position_error = torch.norm(prediction - target, dim=-1) #len(target.shape)-1
-    metric = torch.sum(position_error, dim=0)
-    return metric
 
 def load_statisctics(file_name):
     with open("./logs/run_time_utils/"+file_name+".npy","rb") as f:
@@ -33,123 +30,13 @@ def load_statisctics(file_name):
     return array 
 
 
-class TriangleLoss(torch.nn.Module):
-    def __init__(self, Project = False):
-        super(TriangleLoss, self).__init__()
-        
-        self.Project = Project
-        
-        self.loss_2d = []
-        self.loss_3d = []
-        self.loss_lift = []
-        self.loss_proj = []
-               
-        self.loss_function = torch.nn.L1Loss()
-        # self.loss_function = torch.nn.MSELoss()
-
-    def forward(self, predicted_2d, predicted_3d, lift_2d_gt, lift_2d_pred , gt_2d, gt_3d , proj_3d_pred=None, proj_3d_gt=None):
-        
-        loss_2d_ = self.loss_function(predicted_2d, gt_2d) 
-        loss_3d_ = self.loss_function(predicted_3d, gt_3d)
-         
-        # domain_gap_loss = self.loss_function(lift_2d_pred, lift_2d_gt)
-        loss_lift = self.loss_function(lift_2d_pred, predicted_3d)
-        
-        if self.Project:
-            try:
-                proj_3d_pred[1:] -= proj_3d_pred[0]
-                # proj_3d_gt[1:] -= proj_3d_gt[0]
-                predicted_2d_ = predicted_2d.clone()
-                predicted_2d_[1:] -= predicted_2d_[0]
-                
-                # loss_gap_proj = self.loss_function(proj_3d_pred, proj_3d_gt)  
-                loss_proj = self.loss_function(proj_3d_pred, predicted_2d_)
-            except:
-                breakpoint()
-             
-            returned_loss = loss_2d_ + loss_3d_ + loss_lift + loss_proj 
-        else:
-            returned_loss = loss_2d_ + loss_3d_ + loss_lift
-            
-        self.loss_2d.append(loss_2d_.cpu().item())
-        self.loss_3d.append(loss_3d_.cpu().item())
-        self.loss_lift.append(loss_lift.cpu().item())
-        self.loss_proj.append(loss_proj.cpu().item())
-        
-        return returned_loss, loss_2d_, loss_3d_, loss_lift, loss_proj 
-    
-    def report_losses(self):
-        print(sum(self.loss_2d)/len(self.loss_2d) , sum(self.loss_3d)/len(self.loss_3d) ,
-              sum(self.loss_lift)/len(self.loss_lift) )
-        
-        self.loss_2d = []
-        self.loss_3d = []
-        self.loss_lift = []
-        self.loss_domain_gap = []
-
-
-class TriangleLoss_sep(torch.nn.Module):
-    def __init__(self, Project = False):
-        super(TriangleLoss, self).__init__()
-        
-        self.Project = Project
-        
-        self.loss_2d = []
-        self.loss_3d = []
-        self.loss_lift = []
-        self.loss_domain_gap = []
-        self.loss_proj = []
-        self.loss_gap_proj = [] 
-               
-        self.loss_function = torch.nn.L1Loss()
-        # self.loss_function = torch.nn.MSELoss()
-
-    def forward(self, predicted_2d, predicted_3d, lift_2d_gt, lift_2d_pred , gt_2d, gt_3d , proj_3d_pred=None, proj_3d_gt=None):
-        
-        loss_2d_ = self.loss_function(predicted_2d, gt_2d) 
-        loss_3d_ = self.loss_function(predicted_3d, gt_3d)
-         
-        domain_gap_loss = self.loss_function(lift_2d_pred, lift_2d_gt)
-        loss_lift = self.loss_function(lift_2d_gt, gt_3d)
-        
-        if self.Project:
-            try:
-                proj_3d_pred[1:] -= proj_3d_pred[0]
-                proj_3d_gt[1:] -= proj_3d_gt[0]
-                gt_2d_c = gt_2d.clone()
-                gt_2d_c[1:] -= gt_2d_c[0]
-                
-                loss_gap_proj = self.loss_function(proj_3d_pred, proj_3d_gt)  
-                loss_proj = self.loss_function(proj_3d_gt, gt_2d_c)
-            except:
-                breakpoint()
-             
-            returned_loss = loss_2d_ + loss_3d_ + loss_lift + domain_gap_loss + loss_proj + loss_gap_proj
-        else:
-            returned_loss = loss_2d_ + loss_3d_ + loss_lift + domain_gap_loss
-            
-        self.loss_2d.append(loss_2d_.cpu().item())
-        self.loss_3d.append(loss_3d_.cpu().item())
-        self.loss_lift.append(loss_lift.cpu().item())
-        self.loss_domain_gap.append(domain_gap_loss.cpu().item())
-        
-        return returned_loss
-    
-    def report_losses(self):
-        print(sum(self.loss_2d)/len(self.loss_2d) , sum(self.loss_3d)/len(self.loss_3d) ,
-              sum(self.loss_lift)/len(self.loss_lift), sum(self.loss_domain_gap)/len(self.loss_domain_gap))
-        
-        self.loss_2d = []
-        self.loss_3d = []
-        self.loss_lift = []
-        self.loss_domain_gap = []            
-
 def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Flip=False, Project = False):
     
     #Creating Models
     model_2d= Model_2D().to(device)
     model_3d= Model_3D().to(device)
-    model_lift = LinearModel(i_dim=num_of_joints*input_dimension, o_dim=num_of_joints*output_dimension,p_dropout=0.5, linear_size=1024).to(device)
+    # model_lift = LinearModel(i_dim=num_of_joints*input_dimension, o_dim=num_of_joints*output_dimension,p_dropout=0.5, linear_size=1024).to(device)
+    model_lift = MyViT().to(device)
     if Project:
         model_proj = Projection().to(device)
     
@@ -162,7 +49,7 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
     
     optimizer_2d = torch.optim.Adam(model_2d.parameters(),lr = lr)#, weight_decay=1e-8 
     optimizer_3d = torch.optim.Adam(model_3d.parameters(),lr = lr)
-    optimizer_lift = torch.optim.Adam(model_lift.parameters(),lr = lr)
+    optimizer_lift = torch.optim.Adam(model_lift.parameters(),lr = 0.0001)
     if Project:
         optimizer_proj = torch.optim.Adam(model_proj.parameters(),lr = lr)
     
@@ -418,71 +305,16 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
  
         print(f"epoch {epoch+1}/{n_epochs} loss(train): {train_loss:.4f} , MPJPE(train):{train_metric_3d.cpu().item()}, loss(val.): {val_loss}, MPJPE(val.){val_metric_3d.cpu().item()}") 
         
-    
-    #___visualize__train___
-        
-    y2 = y2.cpu().detach().numpy().reshape(-1, num_of_joints,output_dimension)
-    y2_hat = y2_hat.cpu().detach().numpy().reshape(-1, num_of_joints,output_dimension)
-    visualize_3d(y2[0].copy(),y2_hat[0].copy(),   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_train_a.png")
-    visualize_3d(y2[-1].copy(),y2_hat[-1].copy(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_train_b.png")
-        
-    try:    
-        lift_2d_pred = lift_2d_pred.cpu().detach().numpy().reshape(-1, num_of_joints,output_dimension)
-        visualize_3d(y2[0].copy(),lift_2d_pred[0].copy(),   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_lift_train_a.png")
-        visualize_3d(y2[-1].copy(),lift_2d_pred[-1].copy(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_lift_train_b.png") 
-        
-    except:
-        print("NO 2D to 3D LIFTING RESULTS TO PLOT")   
-    
-    y1 = y1.cpu().detach().numpy().reshape(-1, num_of_joints,2)
-    y1_hat = y1_hat.cpu().detach().numpy().reshape(-1, num_of_joints,2)
-    frame = torch.permute(frame, (0,2,3,1))
-    frame = frame.cpu().detach().numpy()
-    visualize_2d(y1[0].copy(),y1_hat[0].copy(),frame[0].copy(),   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"2d_train_a.png")
-    visualize_2d(y1[-1].copy(),y1_hat[-1].copy(),frame[-1].copy(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"2d_train_b.png")     
-    
-    try:
-        proj_3d_pred = proj_3d_pred.cpu().detach().numpy().reshape(-1, num_of_joints,2)
-        visualize_2d(y1[0].copy(),proj_3d_pred[0].copy(),  frame[0].copy(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_proj_train_a.png")
-        visualize_2d(y1[-1].copy(),proj_3d_pred[-1].copy(),frame[-1].copy(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_proj_train_b.png") 
-        
-    except:
-        print("NO 3D to 2D PROJECTION RESULTS TO PLOT") 
-    
+
+    visualize(y1,y2,y1_hat,y2_hat,lift_2d_pred,proj_3d_pred,frame,run_name, "train", resume) 
     plot_losses(epoch_losses,epoch_val_loss,epoch_metric,epoch_val_metric,"./logs/visualizations/"+(resume*"resumed_")+run_name)
-    
-    #___visualize__validation___
-    
-    y2_v = y2_v.cpu().detach().numpy().reshape(-1, num_of_joints,output_dimension)
-    y2_hat_v = y2_hat_v.cpu().detach().numpy().reshape(-1, num_of_joints,output_dimension)
-    visualize_3d(y2_v[0],y2_hat_v[0],   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_test_a.png")
-    visualize_3d(y2_v[-1],y2_hat_v[-1], "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_test_b.png")
-    
-    try:
-        lift_2d_pred_v = lift_2d_pred_v.cpu().detach().numpy().reshape(-1, num_of_joints,output_dimension)
-        visualize_3d(y1_v[0],lift_2d_pred_v[0],   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_lift_test_a.png")
-        visualize_3d(y1_v[-1],lift_2d_pred_v[-1], "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_lift_test_b.png")
-        
-    except:
-        print("NO 2D to 3D LIFTING RESULTS TO PLOT") 
-    
-    y1_v = y1_v.cpu().detach().numpy().reshape(-1, num_of_joints,2)
-    y1_hat_v = y1_hat_v.cpu().detach().numpy().reshape(-1, num_of_joints,2)
-    frame_v = torch.permute(frame_v, (0,2,3,1))
-    frame_v = frame_v.cpu().detach().numpy()
-    visualize_2d(y1_v[0].copy(),y1_hat_v[0].copy(),frame_v[0].copy(),   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"2d_test_a.png")
-    visualize_2d(y1_v[-1].copy(),y1_hat_v[-1].copy(),frame_v[-1].copy(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"2d_test_b.png")            
-    
-    try:
-        proj_3d_pred_v = proj_3d_pred_v.cpu().detach().numpy().reshape(-1, num_of_joints,2)
-        visualize_2d(y1_v[0].copy(),proj_3d_pred_v[0].copy(),  frame_v[0].copy(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_proj_test_a.png")
-        visualize_2d(y1_v[-1].copy(),proj_3d_pred_v[-1].copy(),frame_v[-1].copy(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_proj_test_b.png") 
-        
-    except:
-        print("NO 3D to 2D PROJECTION RESULTS TO PLOT") 
+    visualize(y1_v,y2_v,y1_hat_v,y2_hat_v,lift_2d_pred_v,proj_3d_pred_v,frame_v,run_name,"test", resume)
         
     #, 'scheduler': lr_schdlr.state_dict()
     torch.save({'epoch' : epoch, 'batch_size':batch_size, 'model' : model_2d.state_dict(), 'optimizer': optimizer_2d.state_dict()  },"./logs/models/"+(resume*"resumed_")+run_name)
+    
+    
+    
     
     return model_2d, model_3d, model_lift
 
@@ -495,7 +327,7 @@ if __name__ == "__main__":
     print("DEVICE:",device)
     batch_size = 32
     n_epochs= 200
-    lr = 0.009
+    lr = 0.001
     run_name = "june_16_tr_pr"
     CtlCSave = False
     Resume = False
