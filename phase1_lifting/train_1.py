@@ -11,10 +11,10 @@ WandB = False
 
 import sys
 sys.path.append("../phase3_direct/my_HybrIK/")
-from utils import visualize_3d,visualize_2d, plot_losses, flip_pose
+from utils import visualize_3d, plot_losses, flip_pose
 from H36_dataset import *
 
-from baselineModel import LinearModel
+from baselineModel import LinearModel, MyViT
 
 def loss_MPJPE(prediction, target):
     B,J,d =  target.shape
@@ -31,12 +31,12 @@ def load_statisctics(file_name):
 def train(batch_size,n_epochs,lr,device,run_name,resume=False):
     
     #Creating Models
-    model_lift = LinearModel(i_dim=num_of_joints*input_dimension, o_dim=num_of_joints*output_dimension,p_dropout=0.5, linear_size=1024).to(device)
+    # model_lift = LinearModel(i_dim=num_of_joints*input_dimension, o_dim=num_of_joints*output_dimension,p_dropout=0.5, linear_size=1024, BN=True).to(device)
+    model_lift = MyViT().to(device)
     loss_function = torch.nn.L1Loss()
     # loss_function = torch.nn.MSELoss(reduction = "mean")
         
-    optimizer_lift = torch.optim.Adam(model_lift.parameters(),lr = lr)
-
+    optimizer_lift = torch.optim.AdamW(model_lift.parameters(),lr = lr)
     
     lr_schdlr_lift = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer_lift, factor=0.7, patience=3, cooldown=2, min_lr=5e-6, verbose=True )
 
@@ -45,8 +45,8 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
         batch_size = torch.load("./logs/models/"+run_name)["batch_size"]
         last_epoch = torch.load("./logs/models/"+run_name)["epoch"]
         
-    training_set = H36_dataset(subjectp=subjects[0:5], is_train = True, action="Walking 1.", split_rate=81) #new
-    test_set     = H36_dataset(subjectp=subjects[5:7] , is_train = False, action="Walking 1.", split_rate=64)
+    training_set = H36_dataset(subjectp=subjects[0:5], is_train = True, action="", split_rate=81) #new
+    test_set     = H36_dataset(subjectp=subjects[5:7] , is_train = False, action="", split_rate=64)
     
     train_loader = DataLoader( training_set, shuffle=True, batch_size=batch_size, num_workers= 2, prefetch_factor=2)
     test_loader = DataLoader(test_set, shuffle=False, batch_size=batch_size, num_workers=2, prefetch_factor=2)
@@ -80,7 +80,8 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
             y1,y2=y1.float(),y2.float()
             y1, y2 = y1.to(device), y2.to(device) 
  
-            y2_hat = model_lift(y1).reshape(current_batch_size,num_of_joints,3)
+            y2_hat = model_lift(y1)
+            y2_hat = y2_hat.reshape(current_batch_size,num_of_joints,3)
 
             if Flip:                 
                 y1 = flip_pose(y1)
@@ -119,12 +120,12 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
                 y1_v,y2_v=y1_v.float(),y2_v.float()
                 y1_v, y2_v = y1_v.to(device), y2_v.to(device)
 
-                lift_2d_gt_v = model_lift(y1_v).reshape(current_batch_size,17,3)
+                y2_hat_v = model_lift(y1_v).reshape(current_batch_size,17,3)
                     
                 if Flip:
                     #flip
                     
-                    y2_hat_v = (flip_pose(model_lift(y1_v).reshape(current_batch_size,17,3)) + lift_2d_gt_v) /2
+                    y2_hat_v = (flip_pose(model_lift(y1_v).reshape(current_batch_size,17,3)) + y2_hat_v) /2
                         
                     #flip back
                     y1_v = flip_pose(y1_v)
@@ -146,11 +147,7 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
         if WandB:             
             wandb.log({"loss(train)": train_loss, "loss(val.)": val_loss,"MPJPE(train)":train_metric_3d.cpu().item() , " MPJPE(val.)":val_metric_3d.cpu().item()})   
         
-        if Triangle:
-            print("___losses___")   
-            loss_function.report_losses()
-            print("val_2d_loss:", val_2d_loss)
- 
+        
         print(f"epoch {epoch+1}/{n_epochs} loss(train): {train_loss:.4f} , MPJPE(train):{train_metric_3d.cpu().item()}, loss(val.): {val_loss}, MPJPE(val.){val_metric_3d.cpu().item()}") 
         
     
@@ -169,20 +166,6 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
     except:
         print("NO 2D to 3D LIFTING RESULTS TO PLOT")   
     
-    # y1 = y1.cpu().detach().numpy().reshape(-1, num_of_joints,2)
-    # y1_hat = y1_hat.cpu().detach().numpy().reshape(-1, num_of_joints,2)
-    # frame = torch.permute(frame, (0,2,3,1))
-    # frame = frame.cpu().detach().numpy()
-    # visualize_2d(y1[0].copy(),y1_hat[0].copy(),frame[0].copy(),   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"2d_train_a.png")
-    # visualize_2d(y1[-1].copy(),y1_hat[-1].copy(),frame[-1].copy(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"2d_train_b.png")     
-    
-    # try:
-    #     proj_3d_pred = proj_3d_pred.cpu().detach().numpy().reshape(-1, num_of_joints,2)
-    #     visualize_2d(y1[0].copy(),proj_3d_pred[0].copy(),  frame[0].copy(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_proj_train_a.png")
-    #     visualize_2d(y1[-1].copy(),proj_3d_pred[-1].copy(),frame[-1].copy(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_proj_train_b.png") 
-        
-    # except:
-    #     print("NO 3D to 2D PROJECTION RESULTS TO PLOT") 
     
     plot_losses(epoch_losses,epoch_val_loss,epoch_metric,epoch_val_metric,"./logs/visualizations/"+(resume*"resumed_")+run_name)
     
@@ -201,28 +184,10 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
     except:
         print("NO 2D to 3D LIFTING RESULTS TO PLOT") 
     
-    y1_v = y1_v.cpu().detach().numpy().reshape(-1, num_of_joints,2)
-    y1_hat_v = y1_hat_v.cpu().detach().numpy().reshape(-1, num_of_joints,2)
-    frame_v = torch.permute(frame_v, (0,2,3,1))
-    frame_v = frame_v.cpu().detach().numpy()
-    visualize_2d(y1_v[0].copy(),y1_hat_v[0].copy(),frame_v[0].copy(),   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"2d_test_a.png")
-    visualize_2d(y1_v[-1].copy(),y1_hat_v[-1].copy(),frame_v[-1].copy(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"2d_test_b.png")            
     
-    try:
-        proj_3d_pred_v = proj_3d_pred_v.cpu().detach().numpy().reshape(-1, num_of_joints,2)
-        visualize_2d(y1_v[0].copy(),proj_3d_pred_v[0].copy(),  frame_v[0].copy(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_proj_test_a.png")
-        visualize_2d(y1_v[-1].copy(),proj_3d_pred_v[-1].copy(),frame_v[-1].copy(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_proj_test_b.png") 
-        
-    except:
-        print("NO 3D to 2D PROJECTION RESULTS TO PLOT") 
-        
-    #, 'scheduler': lr_schdlr.state_dict()
-    torch.save({'epoch' : epoch, 'batch_size':batch_size, 'model' : model_2d.state_dict(), 'optimizer': optimizer_2d.state_dict()  },"./logs/models/"+(resume*"resumed_")+run_name)
+    torch.save({'epoch' : epoch, 'batch_size':batch_size, 'model' : model_lift.state_dict(), 'optimizer': optimizer_lift.state_dict()  },"./logs/models/"+(resume*"resumed_")+run_name)
     
-    return model_2d, model_3d, model_lift
-
-def custom():
-    pass
+    return model_lift
 
         
 if __name__ == "__main__":
@@ -230,16 +195,14 @@ if __name__ == "__main__":
     print("DEVICE:",device)
     batch_size = 32
     n_epochs= 200
-    lr = 0.009
-    run_name = "june_16_tr_pr"
+    lr = 0.0002
+    run_name = "june_16_ViT_whole"
     CtlCSave = False
     Resume = False
     Train = True
     
-    Triangle = 1
-    Flip = 0
-    Project = 1
-    
+    Flip = False
+      
     if Train :
         print("___"+run_name+"___")
         if not os.path.exists("./logs/visualizations/"+run_name):
@@ -249,7 +212,7 @@ if __name__ == "__main__":
             wandb.init(project="loop",name=run_name, config={"learning_rate": lr, "architecture": "CNN","dataset": "H3.6","epochs": n_epochs,})
         
         # try:
-        model = train(batch_size,n_epochs,lr,device,run_name,resume=Resume, Triangle=Triangle, Flip=Flip, Project = Project)
+        model = train(batch_size,n_epochs,lr,device,run_name,resume=Resume)
         # torch.save(model.state_dict(),"./logs/models/second_"+run_name)
         # except KeyboardInterrupt:
         #         if CtlCSave: torch.save(model.state_dict(),"./logs/models/interrupt_"+run_name)
@@ -258,4 +221,3 @@ if __name__ == "__main__":
             wandb.finish() 
             
         print("___"+run_name+" DONE___")
-

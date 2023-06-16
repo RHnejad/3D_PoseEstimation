@@ -58,7 +58,6 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
     lr_schdlr_lift = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer_lift, factor=0.7, patience=3, cooldown=2, min_lr=5e-6, verbose=True )
     lr_schdlr_proj = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer_proj, factor=0.7, patience=3, cooldown=2, min_lr=5e-6, verbose=True )
 
-    
     if resume:
         model_2d.load_state_dict(torch.load("./logs/models/"+run_name)["model"])
         batch_size = torch.load("./logs/models/"+run_name)["batch_size"]
@@ -111,7 +110,7 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
             frame = torch.permute(frame, (0,3,1,2))
                            
             y1_hat = model_2d(frame).reshape(current_batch_size,num_of_joints,2)   
-            y2_hat = model_3d(frame).reshape(current_batch_size,num_of_joints,3)
+            y2_hat, heatmap2_hat = model_3d(frame).reshape(current_batch_size,num_of_joints,3)
             if Triangle:
                 lift_2d_pred = model_lift(y1_hat).reshape(current_batch_size,num_of_joints,3)
                 lift_2d_gt = model_lift(y1).reshape(current_batch_size,num_of_joints,3)
@@ -227,7 +226,7 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
                 frame_v = torch.permute(frame_v, (0,3,1,2))
                 
                 y1_hat_v = model_2d(frame_v).reshape(current_batch_size,17,2)
-                y2_hat_v = model_3d(frame_v).reshape(current_batch_size,17,3)
+                y2_hat_v, heatmap2_hat_v = model_3d(frame_v).reshape(current_batch_size,17,3)
 
                 if Triangle:
                     lift_2d_pred_v = model_lift(y1_hat_v).reshape(current_batch_size,17,3)
@@ -313,9 +312,6 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
     #, 'scheduler': lr_schdlr.state_dict()
     torch.save({'epoch' : epoch, 'batch_size':batch_size, 'model' : model_2d.state_dict(), 'optimizer': optimizer_2d.state_dict()  },"./logs/models/"+(resume*"resumed_")+run_name)
     
-    
-    
-    
     return model_2d, model_3d, model_lift
 
 def custom():
@@ -326,14 +322,14 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("DEVICE:",device)
     batch_size = 32
-    n_epochs= 200
+    n_epochs= 100
     lr = 0.001
     run_name = "june_16_tr_pr"
     CtlCSave = False
     Resume = False
     Train = True
     
-    Triangle = 1
+    Triangle = 0
     Flip = 0
     Project = 1
     

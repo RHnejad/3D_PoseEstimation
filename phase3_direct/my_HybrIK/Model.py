@@ -118,10 +118,15 @@ class Model_3D(nn.Module):
         x0 = self.preact(x)
         out = self.deconv_layers(x0)
         out = self.final_layer(out)
+        
+        returned_heatmap = out.clone().detach()
          
         out = out.reshape((out.shape[0], self.num_joints, -1))
         out = self.norm_heatmap(self.norm_type, out)
         assert out.dim() == 3, out.shape
+        
+        breakpoint()
+        
         
         # maxvals = torch.ones((*out.shape[:2], 1), dtype=torch.float, device=out.device) #check
 
@@ -162,7 +167,21 @@ class Model_3D(nn.Module):
         
         # visualize_3d(numpy_array.copy(), numpy_array)
         
-        return pred_uvd_jts_29_flat
+        return pred_uvd_jts_29_flat, retuned_heatmap
     
     
     
+if __name__ == "__main__":
+    from H36_dataset import H36_dataset
+    
+    from torch.utils.data import DataLoader
+    training_set = H36_dataset(subjectp=["S1"], is_train = True) 
+    train_loader = DataLoader( training_set, shuffle=True, batch_size=1, num_workers= 1)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print("DEVICE:",device)
+    x,y,f,_ = next(iter(train_loader))
+    f = f.float().to(device)
+    f= torch.permute(f, (0,3,1,2))
+    model = Model_3D().to(device)
+    
+    z = model(f)

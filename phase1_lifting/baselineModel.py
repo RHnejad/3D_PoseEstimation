@@ -5,13 +5,14 @@
 
 import torch
 import numpy as np
+from einops import rearrange
 
 def weight_init(m):
     if isinstance(m, torch.nn.Linear):
         torch.nn.init.kaiming_normal(m.weight)
 
 class Linear(torch.nn.Module):
-    def __init__(self, linear_size, p_dropout=0.5):
+    def __init__(self, linear_size, p_dropout=0.5, BN=True):
         super(Linear, self).__init__()
         self.l_size = linear_size
 
@@ -25,15 +26,19 @@ class Linear(torch.nn.Module):
 
         self.w2 = torch.nn.Linear(self.l_size, self.l_size)
         self.batch_norm2 = torch.nn.BatchNorm1d(self.l_size)
+        
+        self.BN = BN
 
     def forward(self, x):
         y = self.w1(x)
-        y = self.batch_norm1(y)
+        if self.BN:
+            y = self.batch_norm1(y)
         y = self.relu(y)
         y = self.dropout(y)
 
         y = self.w2(y)
-        y = self.batch_norm2(y)
+        if self.BN:
+            y = self.batch_norm2(y)
         y = self.relu2(y)
         y = self.dropout2(y)
 
@@ -47,7 +52,8 @@ class LinearModel(torch.nn.Module):
                  i_dim, o_dim,
                  linear_size=1024,
                  num_stage=2,
-                 p_dropout=0.5):
+                 p_dropout=0.5,
+                 BN=True):
         super(LinearModel, self).__init__()
 
         self.linear_size = linear_size
@@ -65,7 +71,7 @@ class LinearModel(torch.nn.Module):
 
         self.linear_stages = []
         for l in range(num_stage):
-            self.linear_stages.append(Linear(self.linear_size, self.p_dropout))
+            self.linear_stages.append(Linear(self.linear_size, self.p_dropout, BN))
         self.linear_stages = torch.nn.ModuleList(self.linear_stages)
 
         # post processing
@@ -75,12 +81,15 @@ class LinearModel(torch.nn.Module):
         self.dropout = torch.nn.Dropout(self.p_dropout)
 
         self.flat =  torch.nn.Flatten() #new
+        
+        self.BN = BN
 
     def forward(self, x):
         # pre-processing
         y = self.flat(x) #new
         y = self.w1(y) #new (x)
-        y = self.batch_norm1(y)
+        if self.BN:
+            y = self.batch_norm1(y)
         y = self.relu(y)
         y = self.dropout(y)
 
@@ -122,10 +131,6 @@ class MLP(torch.nn.Module):
         outp = self.encoder2(inp)
         return outp
 #______ 
-
-
-
-
 
 class AE(torch.nn.Module):
     def __init__(self, input_dim=2, output_dim=3, n_joints=17 ):
@@ -219,6 +224,35 @@ def get_positional_embeddings(sequence_length, d=2):
             result[i][j] = np.sin(i/((1e4)**(j/d))) if j%2==0 else np.cos(i/((1e4)**((j-1)/d)))
     return result
 
+
+class Attention(torch.nn.Module): #https://github.com/lucidrains/vit-pytorch/blob/main/vit_pytorch/simple_vit.py
+    def __init__(self, dim, heads = 8, dim_head = 64):
+        super().__init__()
+        inner_dim = dim_head *  heads
+        self.heads = heads
+        self.scale = dim_head ** -0.5
+        self.norm = torch.nn.LayerNorm(dim)
+
+        self.attend = torch.nn.Softmax(dim = -1)
+
+        self.to_qkv = torch.nn.Linear(dim, inner_dim * 3, bias = False)
+        self.to_out = torch.nn.Linear(inner_dim, dim, bias = False)
+
+    def forward(self, x):
+        x = self.norm(x)
+
+        qkv = self.to_qkv(x).chunk(3, dim = -1)
+        q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = self.heads), qkv)
+
+        dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
+
+        attn = self.attend(dots)
+
+        out = torch.matmul(attn, v)
+        out = rearrange(out, 'b h n d -> b n (h d)')
+        return self.to_out(out)
+
+
 class MyMSA(torch.nn.Module): #MultiHeadSelfAttention
     def __init__(self, d=2, n_heads =1):
         super(MyMSA, self).__init__()
@@ -261,7 +295,8 @@ class MyViTBlock(torch.nn.Module):
     self.n_heads = n_heads
 
     self.norm1 = torch.nn.LayerNorm(hidden_d)
-    self.mhsa = MyMSA(hidden_d, n_heads)
+    # self.mhsa = MyMSA(hidden_d, n_heads)
+    self.mhsa = Attention(hidden_d, n_heads, int(hidden_d/n_heads))
     self.norm2 = torch.nn.LayerNorm(hidden_d)
     self.mlp = torch.nn.Sequential(
         torch.nn.Linear(hidden_d, mlp_ratio*hidden_d),
@@ -275,7 +310,7 @@ class MyViTBlock(torch.nn.Module):
     return out
 
 class MyViT(torch.nn.Module):
-  def __init__(self, chw=(1,17,2),  n_blocks=2, hidden_d=8, n_heads=2, out_d=(17*3)): #17 here might need to be changed to num_of_joints 
+  def __init__(self, chw=(1,17,2),  n_blocks=2, hidden_d=256, n_heads=4, out_d=3): #17 here might need to be changed to num_of_joints 
     #super constructer
     super(MyViT,self).__init__()
 
@@ -286,20 +321,13 @@ class MyViT(torch.nn.Module):
     self.n_heads = n_heads
     self.hidden_d = hidden_d
 
-    # #Input and patches sizes
-    # assert chw[1] % n_patches == 0, "Input shape not entirely divisible by number if patches"
-    # assert chw[2] % n_patches == 0, "Input shape not entirely divisible by number if patches"
-    # self.patch_size = (chw[1]/n_patches, chw[2]/n_patches) -> (28/7, 28/7) (4,4)
 
     # 1) Linear mapper 
-    self.input_d = int(1*2) #int(chw[0]*self.patch_size[0]*self.patch_size[1]) (4*4=16)
+    self.input_d = 2 #int(chw[0]*self.patch_size[0]*self.patch_size[1]) (4*4=16)
     self.linear_mapper = torch.nn.Linear(self.input_d, self.hidden_d)
 
-    # 2) Learnable classification token 
-    self.class_token = torch.nn.Parameter(torch.rand(1,self.hidden_d))
-
     # 3) Positional embedding
-    self.pos_embed = torch.nn.Parameter(torch.tensor(get_positional_embeddings(chw[1]+1,self.hidden_d))) #why the plus one???????
+    self.pos_embed = torch.nn.Parameter(torch.tensor(get_positional_embeddings(chw[1],self.hidden_d)))
     self.pos_embed.requires_grad = False
 
     # 4) Transformer encoder blocks
@@ -307,13 +335,9 @@ class MyViT(torch.nn.Module):
 
     # 5) Classification MLPK
     self.mlp = torch.nn.Sequential(
-        torch.nn.Linear(self.hidden_d, 16), # 17*4=68
+        torch.nn.Linear(self.hidden_d, int(self.hidden_d/2)), # 17*4=68
         torch.torch.nn.ReLU(), 
-        torch.nn.Linear(16, 32),
-        torch.nn.ReLU(),
-        torch.nn.Linear(32, 64),
-        torch.nn.ReLU(),
-        torch.nn.Linear(64, out_d)#, #17*3=51
+        torch.nn.Linear(int(self.hidden_d/2), out_d)#, #17*3=51
         # torch.nn.Tanh()#(dim=-1)
     )
 
@@ -326,9 +350,6 @@ class MyViT(torch.nn.Module):
     #Map the vector corresponding to each path to the hidden size dimension 
     tokens = self.linear_mapper(patches)
 
-    #Adding colassification token to the tokens 
-    tokens = torch.stack([torch.vstack((self.class_token, tokens[i])) for i in range(len(tokens))])
-
     #Adding positional embedding 
     pos_embed = self.pos_embed.repeat(n,1,1)
     out = tokens + pos_embed 
@@ -336,12 +357,7 @@ class MyViT(torch.nn.Module):
     #Transformer Blocks 
     for block in self.blocks: 
       out = block(out)
+      
+    out = self.mlp(out)
 
-    # print("*",out)
-
-    # Getting the classification token only 
-    # out = out [:, 0] new
-
-    # print(out)
-
-    return self.mlp(out) #Map to output dimention, output category distribution
+    return out  

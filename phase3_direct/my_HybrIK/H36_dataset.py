@@ -1,5 +1,6 @@
 
 
+import math
 import numpy as np
 from torch.utils.data import Dataset
 from utils import camera_parameters, qv_mult, flip_pose
@@ -100,8 +101,9 @@ class H36_dataset(Dataset):
                                    
         keypoints_2d = self.dataset2d[idx].reshape(-1 ,2)
         keypoints_3d = self.dataset3d[idx]
-   
         
+        # heatmap = self.generate_3D_heatmap(keypoints_3d)
+   
         #augmentation
         # if self.is_train:
         #     if np.random.sample() < 1 and zero_centre: #translate
@@ -132,9 +134,53 @@ class H36_dataset(Dataset):
             if self.cam_ids[k] in self.video_and_frame_paths[idx][0]:
                 r_cam_id = k
             
-        return keypoints_2d, keypoints_3d, frame, r_cam_id 
+        return keypoints_2d, keypoints_3d, frame, r_cam_id #, heatmap_3d
+
+    
+    def generate_3D_heatmap(self, keypoints, sigma=1.75):
+        """
+        Read the function name duh
+        Args:
+            keypoints (np.float32): Keypoints in 3D ranges from -1 to 1
+            sigma (float, optional): _description_. Defaults to 1.75.
+        """
+        assert np.min(keypoints) > -1
+        assert np.max(keypoints) > 1
+        
+        # Create an empty volumetric heatmap
+        im = np.zeros((64, 64, 64), dtype=np.float32)
+        
+        # Scale keypoints from -1 to 1
+        keypoints = 32 * (1 + keypoints)
+        keypoints_int = np.rint(keypoints).astype(int)
+        
+        # Size of 3D Gaussian window.
+        size = int(math.ceil(6 * sigma))
+        # Ensuring that size remains an odd number
+        if not size % 2:
+            size += 1
+            
+        # Generate gaussian, with window=size and variance=sigma
+        u = np.arange(keypoints_int[0] - (size // 2), keypoints_int[0] + (size // 2) + 1)
+        v = np.arange(keypoints_int[1] - (size // 2), keypoints_int[1] + (size // 2) + 1)
+        w = np.arange(keypoints_int[2] - (size // 2), keypoints_int[2] + (size // 2) + 1)
+        uu, vv, ww = np.meshgrid(u, v, w, indexing='ij', sparse=True)
+        z = np.exp(-((uu - keypoints[0]) ** 2 + (vv - keypoints[1]) ** 2 + (ww - keypoints[2]) ** 2) / (2 * (sigma ** 2)))
+
+        # Identify indices in im that will define the crop area
+            # top = max(0, pt_uv_rint[0] - (size//2))
+            # bottom = min(hm_shape[0], pt_uv_rint[0] + (size//2) + 1)
+            # left = max(0, pt_uv_rint[1] - (size//2))
+            # right = min(hm_shape[1], pt_uv_rint[1] + (size//2) + 1)
+
+            # im[top:bottom, left:right] = \
+            #     z[top - (pt_uv_rint[0] - (size//2)): top - (pt_uv_rint[0] - (size//2)) + (bottom - top),
+            #       left - (pt_uv_rint[1] - (size//2)): left - (pt_uv_rint[1] - (size//2)) + (right - left)]
+
+            # return im
 
         
+
 
         
     def process_data(self, dataset , sample=sample, is_train = True, standardize = False, z_c = zero_centre) :
