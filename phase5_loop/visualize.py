@@ -10,11 +10,14 @@ output_dimension = 3
 
 def visualize(y1,y2,y1_hat,y2_hat,lift_2d_pred,proj_3d_pred, frame,run_name, testORtrain ,  resume):
     
-    y2 = y2.cpu().detach().numpy().reshape(-1, num_of_joints,output_dimension)
-    y2_hat = y2_hat.cpu().detach().numpy().reshape(-1, num_of_joints,output_dimension)
-    visualize_3d(y2[0].copy(),y2_hat[0].copy(),   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_"+str(testORtrain)+"_a.png")
-    visualize_3d(y2[-1].copy(),y2_hat[-1].copy(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_"+str(testORtrain)+"_b.png")
-        
+    try:
+        y2 = y2.cpu().detach().numpy().reshape(-1, num_of_joints,output_dimension)
+        y2_hat = y2_hat.cpu().detach().numpy().reshape(-1, num_of_joints,output_dimension)
+        visualize_3d(y2[0].copy(),y2_hat[0].copy(),   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_"+str(testORtrain)+"_a.png")
+        visualize_3d(y2[-1].copy(),y2_hat[-1].copy(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_"+str(testORtrain)+"_b.png")
+    except:
+        print("NO DIRECT 3D RESULTS TO PLOT")   
+            
     try:    
         lift_2d_pred = lift_2d_pred.cpu().detach().numpy().reshape(-1, num_of_joints,output_dimension)
         visualize_3d(y2[0].copy(),lift_2d_pred[0].copy(),   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_lift_"+str(testORtrain)+"_a.png")

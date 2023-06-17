@@ -147,19 +147,22 @@ class Projection(torch.nn.Module):
         self.mlp = torch.nn.Sequential(
             torch.nn.Flatten(),
 
-            torch.nn.Linear(self.input_dim, 64),
-            torch.nn.ReLU(),
+            torch.nn.Linear(self.input_dim, 512),
+            torch.nn.BatchNorm1d(512),
+            torch.nn.Tanh(),
+            torch.nn.Dropout(0.3),
+            
+            torch.nn.Linear(512, 256),
+            torch.nn.BatchNorm1d(256),
+            torch.nn.Tanh(),
             torch.nn.Dropout(0.3),
 
-            torch.nn.Linear(64, 32),
-            torch.nn.ReLU(),
+            torch.nn.Linear(256, 128),
+            torch.nn.BatchNorm1d(128),
+            torch.nn.Tanh(),
             torch.nn.Dropout(0.3),
 
-            torch.nn.Linear(32, 32),
-            torch.nn.ReLU(),
-            torch.nn.Dropout(0.3),
-
-            torch.nn.Linear(32, self.output_dim),          
+            torch.nn.Linear(128, self.output_dim),          
         )
   
     def forward(self, inp):

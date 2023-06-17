@@ -323,7 +323,7 @@ class MyViT(torch.nn.Module):
 
 
     # 1) Linear mapper 
-    self.input_d = 2 #int(chw[0]*self.patch_size[0]*self.patch_size[1]) (4*4=16)
+    self.input_d = chw[2] #int(chw[0]*self.patch_size[0]*self.patch_size[1]) (4*4=16)
     self.linear_mapper = torch.nn.Linear(self.input_d, self.hidden_d)
 
     # 3) Positional embedding
