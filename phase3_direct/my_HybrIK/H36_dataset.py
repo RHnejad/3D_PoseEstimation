@@ -73,17 +73,7 @@ class H36_dataset(Dataset):
         
         self.is_train = is_train
         
-        # self.shift = A.Compose([A.Shift(p=1, shift_limit=0.2, scale_limit=0.25,
-        #                                                                    rotate_limit=45, interpolation=cv2.INTER_LINEAR,
-        #                                                                    border_mode=cv2.BORDER_CONSTANT, value=0)],
-        #                        p=1, keypoint_params=A.KeypointParams(format='yx', remove_invisible=False))
-        # self.scale = A.Compose([A.Shift(p=1, shift_limit=0.2, scale_limit=0.25,
-        #                                                                    rotate_limit=45, interpolation=cv2.INTER_LINEAR,
-        #                                                                    border_mode=cv2.BORDER_CONSTANT, value=0)],
-        #                        p=1, keypoint_params=A.KeypointParams(format='yx', remove_invisible=False))
-        # self.rotate = 
-
-        
+      
     def __len__(self):
         return len(self.dataset3d) #number of all the frames 
 
@@ -102,7 +92,7 @@ class H36_dataset(Dataset):
         keypoints_2d = self.dataset2d[idx].reshape(-1 ,2)
         keypoints_3d = self.dataset3d[idx]
         
-        # heatmap = self.generate_3D_heatmap(keypoints_3d)
+        heatmap_3d = self.keypoints_to_heatmap_3D(keypoints_3d)
    
         #augmentation
         # if self.is_train:
@@ -134,55 +124,70 @@ class H36_dataset(Dataset):
             if self.cam_ids[k] in self.video_and_frame_paths[idx][0]:
                 r_cam_id = k
             
-        return keypoints_2d, keypoints_3d, frame, r_cam_id #, heatmap_3d
+        return keypoints_2d, keypoints_3d, frame, r_cam_id, heatmap_3d
 
     
-    def generate_3D_heatmap(self, keypoints, sigma=1.75):
+    def xyz_to_uvw(self, kp): #here
+        # return np.array([-kp[1], -kp[2], kp[0]])
+        return np.array([kp[2], kp[0], -kp[1]])
+    
+    
+    def _keypoint_to_heatmap_3D(self, keypoint, sigma=1.75):
         """
         Read the function name duh
         Args:
             keypoints (np.float32): Keypoints in 3D ranges from -1 to 1
-            sigma (float, optional): _description_. Defaults to 1.75.
+            sigma (float, optional):Size of the Gaussian. Defaults to 1.75.
         """
-        assert np.min(keypoints) > -1
-        assert np.max(keypoints) > 1
-        
+
+        assert np.min(keypoint) >= -1
+        assert np.max(keypoint) <= 1
+
         # Create an empty volumetric heatmap
         im = np.zeros((64, 64, 64), dtype=np.float32)
-        
+
         # Scale keypoints from -1 to 1
-        keypoints = 32 * (1 + keypoints)
-        keypoints_int = np.rint(keypoints).astype(int)
-        
+        keypoint = 31.5 * (1 + keypoint)
+        keypoint_int = np.rint(keypoint).astype(int)
+
         # Size of 3D Gaussian window.
         size = int(math.ceil(6 * sigma))
         # Ensuring that size remains an odd number
         if not size % 2:
             size += 1
-            
+
         # Generate gaussian, with window=size and variance=sigma
-        u = np.arange(keypoints_int[0] - (size // 2), keypoints_int[0] + (size // 2) + 1)
-        v = np.arange(keypoints_int[1] - (size // 2), keypoints_int[1] + (size // 2) + 1)
-        w = np.arange(keypoints_int[2] - (size // 2), keypoints_int[2] + (size // 2) + 1)
+        u = np.arange(keypoint_int[0] - (size // 2), keypoint_int[0] + (size // 2) + 1)
+        v = np.arange(keypoint_int[1] - (size // 2), keypoint_int[1] + (size // 2) + 1)
+        w = np.arange(keypoint_int[2] - (size // 2), keypoint_int[2] + (size // 2) + 1)
         uu, vv, ww = np.meshgrid(u, v, w, indexing='ij', sparse=True)
-        z = np.exp(-((uu - keypoints[0]) ** 2 + (vv - keypoints[1]) ** 2 + (ww - keypoints[2]) ** 2) / (2 * (sigma ** 2)))
+        z = np.exp(-((uu - keypoint[0]) ** 2 + (vv - keypoint[1]) ** 2 + (ww - keypoint[2]) ** 2) / (2 * (sigma ** 2)))
 
         # Identify indices in im that will define the crop area
-            # top = max(0, pt_uv_rint[0] - (size//2))
-            # bottom = min(hm_shape[0], pt_uv_rint[0] + (size//2) + 1)
-            # left = max(0, pt_uv_rint[1] - (size//2))
-            # right = min(hm_shape[1], pt_uv_rint[1] + (size//2) + 1)
+        top_u = max(0, keypoint_int[0] - (size//2))
+        top_v = max(0, keypoint_int[1] - (size//2))
+        top_w = max(0, keypoint_int[2] - (size//2))
 
-            # im[top:bottom, left:right] = \
-            #     z[top - (pt_uv_rint[0] - (size//2)): top - (pt_uv_rint[0] - (size//2)) + (bottom - top),
-            #       left - (pt_uv_rint[1] - (size//2)): left - (pt_uv_rint[1] - (size//2)) + (right - left)]
+        bottom_u = min(64, keypoint_int[0] + (size//2) + 1)
+        bottom_v = min(64, keypoint_int[1] + (size//2) + 1)
+        bottom_w = min(64, keypoint_int[2] + (size//2) + 1)
 
-            # return im
+        im[top_u:bottom_u, top_v:bottom_v, top_w:bottom_w] = \
+            z[top_u - (keypoint_int[0] - (size//2)): top_u - (keypoint_int[0] - (size//2)) + (bottom_u - top_u),
+            top_v - (keypoint_int[1] - (size//2)): top_v - (keypoint_int[1] - (size//2)) + (bottom_v - top_v),
+            top_w - (keypoint_int[2] - (size//2)): top_w - (keypoint_int[2] - (size//2)) + (bottom_w - top_w)]
 
+        return im
+            
+    def keypoints_to_heatmap_3D(self, keypoints):
+        hm = []
+        for i in range(keypoints.shape[0]):
+            kp = self.xyz_to_uvw(keypoints[i])
+            # kp = keypoints[i]
+            hm.append(self._keypoint_to_heatmap_3D(kp))
+        return np.stack(hm, axis=0)
         
-
-
-        
+    
     def process_data(self, dataset , sample=sample, is_train = True, standardize = False, z_c = zero_centre) :
 
         n_frames, n_joints, dim = dataset.shape

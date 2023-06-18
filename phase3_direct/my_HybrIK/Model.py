@@ -107,13 +107,13 @@ class Model_3D(nn.Module):
             return heatmap.reshape(*shape)
         else:
             raise NotImplementedError
+        
+    def uvw_to_xyz(self, kp):
+        return torch.tensor([kp[2], -kp[0], -kp[1]])
             
     def forward(self, x):
     
         batch_size = x.shape[0]
-    
-        #new
-        # x = torch.permute(x, (0,3,1,2))
     
         x0 = self.preact(x)
         out = self.deconv_layers(x0)
@@ -125,14 +125,14 @@ class Model_3D(nn.Module):
         out = self.norm_heatmap(self.norm_type, out)
         assert out.dim() == 3, out.shape
         
-        breakpoint()
-        
+        retuned_heatmap = out.reshape((-1,17,64,64,64))
         
         # maxvals = torch.ones((*out.shape[:2], 1), dtype=torch.float, device=out.device) #check
 
         heatmaps = out / out.sum(dim=2, keepdim=True) #out.sum is 1 if softmax so not actually needed
         
         heatmaps = heatmaps.reshape((heatmaps.shape[0], self.num_joints, self.depth_dim, self.height_dim, self.width_dim))
+        
         
         hm_x = heatmaps.sum((2, 3))
         hm_y = heatmaps.sum((2, 4))
@@ -156,19 +156,18 @@ class Model_3D(nn.Module):
         coord_y = hm_y.sum(dim=2, keepdim=True)
         coord_z = hm_z.sum(dim=2, keepdim=True)
 
-        coord_x = (coord_x / float(self.width_dim) - 0.5)*2
-        coord_y = (coord_y / float(self.height_dim) - 0.5)*2
-        coord_z = (coord_z / float(self.depth_dim) - 0.5)*2
+        coord_x = (coord_x / float(self.width_dim) - 0.5)*1.8
+        coord_y = (coord_y / float(self.height_dim) - 0.5)*1.8
+        coord_z = (coord_z / float(self.depth_dim) - 0.5)*1.8
         
         #  -0.5 ~ 0.5 0-1
         pred_uvd_jts_29 = torch.cat((coord_x, coord_y, coord_z), dim=2)
+        
+        # pred_uvd_jts_29 = torch.cat((coord_x, -coord_z, -coord_y), dim=2) #HERE
 
         pred_uvd_jts_29_flat = pred_uvd_jts_29.reshape((batch_size, self.num_joints * 3)) 
-        
-        # visualize_3d(numpy_array.copy(), numpy_array)
-        
+                
         return pred_uvd_jts_29_flat, retuned_heatmap
-    
     
     
 if __name__ == "__main__":

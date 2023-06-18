@@ -78,7 +78,20 @@ class H36_dataset(Dataset):
     def __getitem__(self, idx):
         pass
 
-if __name__ == "__main__" :      
-    pass
-        
-   
+if __name__ == "__main__" :
+    
+    import pickle     
+    path = "/home/rh/codes/EpipolarPose/data/h36m/annot/train-fs.pkl"
+    
+    import sys
+    sys.path.append("/home/rh/codes/EpipolarPose/")
+     
+    with open(path, 'rb') as file:
+        # breakpoint()
+        data = pickle.load(file)
+
+    print(data[1][0]["image"])
+    print(data[2][0]["image"])
+    print(data[3][0]["image"])
+    print(data[4][0]["image"])
+    breakpoint()

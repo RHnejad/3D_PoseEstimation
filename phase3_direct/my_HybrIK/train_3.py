@@ -74,7 +74,7 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
             frame = frame.float()
             frame =frame.to(device)
             
-            y_hat = model_direct(frame)       
+            y_hat, hm_hat = model_direct(frame)       
             y_hat = y_hat.reshape(-1,num_of_joints,output_dimension)
             
             loss = loss_function(y_hat, y) 
@@ -121,7 +121,7 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
                 frame_v = frame_v.float()
                 frame_v =frame_v.to(device)
                 
-                y_hat_v = model_direct(frame_v)
+                y_hat_v, hm_hat_v = model_direct(frame_v)
                     
                 y_hat_v = y_hat_v.reshape(-1,num_of_joints,output_dimension)
                 

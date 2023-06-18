@@ -38,6 +38,10 @@ def visualize_3d(keypoints,keypoints2, name="3d"):
     ax.axes.set_yticks([-1,0,1])
     ax.axes.set_zticks([-1,0,1])
     
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    
     ax.view_init(elev=120, azim=60)
     
     plt.savefig(name)
@@ -48,20 +52,19 @@ def visualize_2d(keypoints,st_kp=None, frame=None, name = "kp"):
     sk_points = [[0,1],[1,2],[2,3],[0,4],[4,5],[5,6],[5,6],[0,7],[7,8],[8,9],[9,10],[8,11],[11,12],[12,13],[8,14],[14,15],[15,16]]
     
     if keypoints.shape[0] != 17 :
+        print("***** visualizations for 2d with 16 ky *****")
         keypoints = np.insert(keypoints , 0 , values= [0,0], axis=0 )
         st_kp = np.insert(st_kp , 0 , values= [(st_kp[0,0]+st_kp[5,0])/2,(st_kp[0,1]+st_kp[5,1])/2], axis=0 )
 
     plt.figure()
 
-    if 1 :
-        frame = cv2.resize(frame, dsize=(1000, 1000), interpolation=cv2.INTER_CUBIC)
-        keypoints[:,0] = keypoints[:,0] *1000
-        keypoints[:,1] = keypoints[:,1] *1000
-        st_kp[:,0] = st_kp[:,0] *1000
-        st_kp[:,1] = st_kp[:,1] *1000
-        plt.imshow(frame)
-        # plt.imshow(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-        # print(keypoints,st_kp )
+    frame = cv2.resize(frame, dsize=(1000, 1000), interpolation=cv2.INTER_CUBIC)
+    keypoints[:,0] = keypoints[:,0] *1000
+    keypoints[:,1] = keypoints[:,1] *1000
+    st_kp[:,0] = st_kp[:,0] *1000
+    st_kp[:,1] = st_kp[:,1] *1000
+    plt.imshow(frame)
+
 
     plt.plot(keypoints.T[0],keypoints.T[1], "o", color="turquoise", markersize=3)
     for i in range(17):

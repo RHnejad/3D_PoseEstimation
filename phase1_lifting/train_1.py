@@ -11,7 +11,7 @@ WandB = False
 
 import sys
 sys.path.append("../phase3_direct/my_HybrIK/")
-from utils import visualize_3d, plot_losses, flip_pose
+from utils import visualize_3d, plot_losses, flip_pose, visualize_2d
 from H36_dataset import *
 
 from baselineModel import LinearModel, MyViT
@@ -31,8 +31,8 @@ def load_statisctics(file_name):
 def train(batch_size,n_epochs,lr,device,run_name,resume=False):
     
     #Creating Models
-    # model_lift = LinearModel(i_dim=num_of_joints*input_dimension, o_dim=num_of_joints*output_dimension,p_dropout=0.5, linear_size=1024, BN=True).to(device)
-    model_lift = MyViT().to(device)
+    model_lift = LinearModel(i_dim=num_of_joints*input_dimension, o_dim=num_of_joints*output_dimension,p_dropout=0.5, linear_size=1024, BN=True).to(device)
+    # model_lift = MyViT().to(device)
     loss_function = torch.nn.L1Loss()
     # loss_function = torch.nn.MSELoss(reduction = "mean")
         
@@ -45,8 +45,8 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
         batch_size = torch.load("./logs/models/"+run_name)["batch_size"]
         last_epoch = torch.load("./logs/models/"+run_name)["epoch"]
         
-    training_set = H36_dataset(subjectp=subjects[0:5], is_train = True, action="", split_rate=81) #new
-    test_set     = H36_dataset(subjectp=subjects[5:7] , is_train = False, action="", split_rate=64)
+    training_set = H36_dataset(subjectp=subjects[0:5], is_train = True, action="", split_rate=810) #new
+    test_set     = H36_dataset(subjectp=subjects[5:7] , is_train = False, action="", split_rate=640)
     
     train_loader = DataLoader( training_set, shuffle=True, batch_size=batch_size, num_workers= 2, prefetch_factor=2)
     test_loader = DataLoader(test_set, shuffle=False, batch_size=batch_size, num_workers=2, prefetch_factor=2)
@@ -74,14 +74,14 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
 
             optimizer_lift.zero_grad()
 
-            y1, y2, _, _  = batch
+            y1, y2, frame, _ ,_ = batch
             current_batch_size = y1.shape[0]
             
             y1,y2=y1.float(),y2.float()
             y1, y2 = y1.to(device), y2.to(device) 
             
             #addign noise to input
-            y1 = y1 + (0.05)*torch.randn(current_batch_size, 17, 2).to(device)
+            # y1 = y1 + (0.05)*torch.randn(current_batch_size, 17, 2).to(device)
  
             y2_hat = model_lift(y1)
             y2_hat = y2_hat.reshape(current_batch_size,num_of_joints,3)
@@ -116,7 +116,7 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
             val_2d_loss = 0.0
             val_metric_3d = torch.zeros(num_of_joints).to(device)
             
-            for y1_v, y2_v,_ ,_  in test_loader:
+            for y1_v, y2_v,frame_v ,_ ,_ in test_loader:
                 
                 current_batch_size = y1_v.shape[0]
                 
@@ -160,16 +160,13 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
     y2_hat = y2_hat.cpu().detach().numpy().reshape(-1, num_of_joints,output_dimension)
     visualize_3d(y2[0].copy(),y2_hat[0].copy(),   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_train_a.png")
     visualize_3d(y2[-1].copy(),y2_hat[-1].copy(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_train_b.png")
+
+    y1 = y1.cpu().detach().numpy().reshape(-1, num_of_joints,2)
+    y1_hat = np.zeros((1,17,2))#y1_hat.cpu().detach().numpy().reshape(-1, num_of_joints,2)
+    visualize_2d(y1[0].copy(),y1_hat[0].copy(),frame[0].copy(),   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"2d_"+str(testORtrain)+"_a.png")
+    visualize_2d(y1[-1].copy(),y1_hat[-1].copy(),frame[-1].copy(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"2d_"+str(testORtrain)+"_b.png")         
         
-    try:    
-        lift_2d_pred = lift_2d_pred.cpu().detach().numpy().reshape(-1, num_of_joints,output_dimension)
-        visualize_3d(y2[0].copy(),lift_2d_pred[0].copy(),   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_lift_train_a.png")
-        visualize_3d(y2[-1].copy(),lift_2d_pred[-1].copy(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_lift_train_b.png") 
-        
-    except:
-        print("NO 2D to 3D LIFTING RESULTS TO PLOT")   
-    
-    
+
     plot_losses(epoch_losses,epoch_val_loss,epoch_metric,epoch_val_metric,"./logs/visualizations/"+(resume*"resumed_")+run_name)
     
     #___visualize__validation___
@@ -179,15 +176,11 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
     visualize_3d(y2_v[0],y2_hat_v[0],   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_test_a.png")
     visualize_3d(y2_v[-1],y2_hat_v[-1], "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_test_b.png")
     
-    try:
-        lift_2d_pred_v = lift_2d_pred_v.cpu().detach().numpy().reshape(-1, num_of_joints,output_dimension)
-        visualize_3d(y1_v[0],lift_2d_pred_v[0],   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_lift_test_a.png")
-        visualize_3d(y1_v[-1],lift_2d_pred_v[-1], "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_lift_test_b.png")
+    y1_v = y1_v.cpu().detach().numpy().reshape(-1, num_of_joints,2)
+    y1_hat_v = np.zeros((1,17,2))#y1_hat.cpu().detach().numpy().reshape(-1, num_of_joints,2)
+    visualize_2d(y1_v[0].copy(),y1_hat_v[0].copy(),frame_v[0].copy(),   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"2d_"+str(testORtrain)+"_a.png")
+    visualize_2d(y1_v[-1].copy(),y1_hat_v[-1].copy(),frame_v[-1].copy(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"2d_"+str(testORtrain)+"_b.png")         
         
-    except:
-        print("NO 2D to 3D LIFTING RESULTS TO PLOT") 
-    
-    
     torch.save({'epoch' : epoch, 'batch_size':batch_size, 'model' : model_lift.state_dict(), 'optimizer': optimizer_lift.state_dict()  },"./logs/models/"+(resume*"resumed_")+run_name)
     
     return model_lift
@@ -198,8 +191,8 @@ if __name__ == "__main__":
     print("DEVICE:",device)
     batch_size = 32
     n_epochs= 200
-    lr = 0.0002
-    run_name = "june_16_vit_whole_17mean_withNoise"
+    lr = 0.002
+    run_name = "june_16_martinez_whole_17mean"
     CtlCSave = False
     Resume = False
     Train = True

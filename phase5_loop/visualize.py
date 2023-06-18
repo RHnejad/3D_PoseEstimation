@@ -24,7 +24,9 @@ def visualize(y1,y2,y1_hat,y2_hat,lift_2d_pred,proj_3d_pred, frame,run_name, tes
         visualize_3d(y2[-1].copy(),lift_2d_pred[-1].copy(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_lift_"+str(testORtrain)+"_b.png") 
         
     except:
-        print("NO 2D to 3D LIFTING RESULTS TO PLOT")   
+        print("NO 2D to 3D LIFTING RESULTS TO PLOT") 
+        
+          
     
     y1 = y1.cpu().detach().numpy().reshape(-1, num_of_joints,2)
     y1_hat = y1_hat.cpu().detach().numpy().reshape(-1, num_of_joints,2)

@@ -28,7 +28,7 @@ class TriangleLoss(torch.nn.Module):
          
         # domain_gap_loss = self.loss_function(lift_2d_pred, lift_2d_gt)
         loss_lift = self.loss_function(lift_2d_pred, predicted_3d)
-        
+        loss_proj = 0
         if self.Project:
             try:
                 proj_3d_pred[1:] -= proj_3d_pred[0]
@@ -48,7 +48,7 @@ class TriangleLoss(torch.nn.Module):
         self.loss_2d.append(loss_2d_.cpu().item())
         self.loss_3d.append(loss_3d_.cpu().item())
         self.loss_lift.append(loss_lift.cpu().item())
-        self.loss_proj.append(loss_proj.cpu().item())
+        if self.Project : self.loss_proj.append(loss_proj.cpu().item())
         
         return returned_loss, loss_2d_, loss_3d_, loss_lift, loss_proj 
     

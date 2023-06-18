@@ -77,7 +77,7 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
 
             optimizer_proj.zero_grad()
 
-            y1, y2, frame, _  = batch
+            y1, y2, frame, _ ,_ = batch
             current_batch_size = y1.shape[0]
             
             y1,y2 =y1.float(),y2.float()
@@ -116,7 +116,7 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
             val_2d_loss = 0.0
             val_metric_3d = torch.zeros(num_of_joints).to(device)
             
-            for y1_v, y2_v,frame_v, _  in test_loader:
+            for y1_v, y2_v,frame_v, _ ,_ in test_loader:
                 
                 current_batch_size = y1_v.shape[0]
                 
@@ -162,9 +162,9 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("DEVICE:",device)
     batch_size = 64
-    n_epochs= 100
-    lr = 0.0001
-    run_name = "june_16_tr_pr"
+    n_epochs= 200
+    lr = 0.0002
+    run_name = "june18_project"
     CtlCSave = False
     Resume = False
     Train = True
