@@ -5,9 +5,9 @@ import numpy as np
 from torch.utils.data import Dataset
 from utils import camera_parameters, qv_mult, flip_pose
 import cv2
-import albumentations as A
+# import albumentations as A
 
-systm = "vita17"  #izar,vita17,laptop
+systm = "laptop"  #izar,vita17,laptop
 act = "Walking" #"Walking"
 load_imgs = True
 from_videos = False
@@ -70,12 +70,11 @@ class H36_dataset(Dataset):
         self.transform = transform
         self.target_transform = target_transform
         self.is_train = is_train
-        
-        self.is_train = is_train
-        
+                
       
     def __len__(self):
-        return len(self.dataset3d) #number of all the frames 
+        return 1
+        # return len(self.dataset3d) #number of all the frames 
 
     def __getitem__(self, idx):
 
@@ -129,7 +128,7 @@ class H36_dataset(Dataset):
     
     def xyz_to_uvw(self, kp): #here
         # return np.array([-kp[1], -kp[2], kp[0]])
-        return np.array([kp[2], kp[0], -kp[1]])
+        return np.array([kp[2], kp[1], kp[0]])
     
     
     def _keypoint_to_heatmap_3D(self, keypoint, sigma=1.75):
@@ -160,6 +159,7 @@ class H36_dataset(Dataset):
         u = np.arange(keypoint_int[0] - (size // 2), keypoint_int[0] + (size // 2) + 1)
         v = np.arange(keypoint_int[1] - (size // 2), keypoint_int[1] + (size // 2) + 1)
         w = np.arange(keypoint_int[2] - (size // 2), keypoint_int[2] + (size // 2) + 1)
+        
         uu, vv, ww = np.meshgrid(u, v, w, indexing='ij', sparse=True)
         z = np.exp(-((uu - keypoint[0]) ** 2 + (vv - keypoint[1]) ** 2 + (ww - keypoint[2]) ** 2) / (2 * (sigma ** 2)))
 
