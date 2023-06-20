@@ -11,7 +11,7 @@ WandB = False
 # ln -s /data2/rh-data/h3.6/Images   /home/rh/codes/EpipolarPose/data/h36m/images
 
 from Model_2d import Model_2D, Projection
-from losses import loss_MPJPE, TriangleLoss, TriangleLoss_sep    
+from losses import loss_MPJPE, TriangleLoss, TriangleLoss_sep   
 from visualize  import visualize
 
 import sys
@@ -29,6 +29,25 @@ def load_statisctics(file_name):
         array =np.load(f)
     return array 
 
+def destandardize(y2, y2_hat):
+    if standardize_3d:
+        if Normalize:
+            max_train_3d, min_train_3d = load_statisctics("max_train_3d"), load_statisctics("min_train_3d")
+            max_train_3d, min_train_3d = torch.from_numpy(max_train_3d).to(device), torch.from_numpy(min_train_3d).to(device)
+            y2_hat *= (max_train_3d-min_train_3d)
+            y2 *= (max_train_3d-min_train_3d)
+            y2_hat += min_train_3d
+            y2 += min_train_3d
+        else:
+            mean_train_3d, std_train_3d = load_statisctics("mean_train_3d"), load_statisctics("std_train_3d")
+            mean_train_3d, std_train_3d = torch.from_numpy(mean_train_3d).to(device), torch.from_numpy(std_train_3d).to(device)
+            y2_hat *= std_train_3d
+            y2 *= std_train_3d           
+            y2_hat += mean_train_3d
+            y2 += mean_train_3d
+            
+        return y2, y2_hat
+            
 
 def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Flip=False, Project = False):
     
@@ -51,7 +70,7 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
     
     
     if Triangle:
-        loss_function = TriangleLoss(Project)
+        loss_function = TriangleLoss_sep(Project)
     else:
         loss_function = torch.nn.L1Loss()
         # loss_function = torch.nn.MSELoss(reduction = "mean")
@@ -59,9 +78,9 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
     
     optimizer_2d = torch.optim.AdamW(model_2d.parameters(),lr = lr)#, weight_decay=1e-8 
     optimizer_3d = torch.optim.AdamW(model_3d.parameters(),lr = lr)
-    optimizer_lift = torch.optim.AdamW(model_lift.parameters(),lr = 0.0)
+    optimizer_lift = torch.optim.AdamW(model_lift.parameters(),lr = 0.00000)
     if Project:
-        optimizer_proj = torch.optim.AdamW(model_proj.parameters(),lr = 0.00001)
+        optimizer_proj = torch.optim.AdamW(model_proj.parameters(),lr = 0.00000)
     
     lr_schdlr_3d = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer_3d, factor=0.7, patience=3, cooldown=2, min_lr=5e-6, verbose=True )
     lr_schdlr_2d = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer_2d, factor=0.7, patience=3, cooldown=2, min_lr=5e-6, verbose=True )
@@ -73,8 +92,8 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
         batch_size = torch.load("./logs/models/"+run_name)["batch_size"]
         last_epoch = torch.load("./logs/models/"+run_name)["epoch"]
         
-    training_set = H36_dataset(subjectp=subjects[0:1], is_train = True, action="Directions 1.54138969", split_rate=64) #new
-    test_set     = H36_dataset(subjectp=subjects[0:1] , is_train = False, action="Directions 1.54138969", split_rate=64)
+    training_set = H36_dataset(subjectp=subjects[0:5], is_train = True, action="Walking ", split_rate=64) #new
+    test_set     = H36_dataset(subjectp=subjects[5:7] , is_train = False, action="Walking", split_rate=64)
     
     train_loader = DataLoader( training_set, shuffle=True, batch_size=batch_size, num_workers= 2, prefetch_factor=2)
     test_loader = DataLoader(test_set, shuffle=False, batch_size=batch_size, num_workers=2, prefetch_factor=2)
@@ -86,8 +105,8 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
         max_train_3d[:1,:] *= 0 
         min_train_3d[:1,:] *= 0
 
-    mean_k = mean_train_3d [list(range(17-num_of_joints,17)),:]
-    std_k = std_train_3d [list(range(17-num_of_joints,17)),:]    
+    # mean_k = mean_train_3d [list(range(17-num_of_joints,17)),:]
+    # std_k = std_train_3d [list(range(17-num_of_joints,17)),:]    
     
     epoch_losses, epoch_metric = list(), list()
     epoch_val_loss, epoch_val_metric  = list(), list()
@@ -162,15 +181,14 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
             
             else :
                 loss_2d = loss_function(y1_hat, y1) 
-                # loss_3d = loss_function(y2_hat, y2)   #here
+                loss_3d = loss_function(y2_hat, y2)   #here
                 
                 # print("Before:",loss_3d)
-                loss_3d = loss_function(heatmap_hat ,hm)*10
+                # loss_3d = loss_function(heatmap_hat ,hm)*1000
                 # print("After:",loss_3d)
-                
+        
                 loss_2d.backward()
                 loss_3d.backward()
-
 
             optimizer_2d.step()
             optimizer_3d.step()
@@ -180,7 +198,9 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
             
             if Triangle: train_loss += loss.cpu().item() / len(train_loader)
             else: train_loss += loss_2d.cpu().item() / len(train_loader)
-                
+            
+            if standardize_3d: y2, y2_hat = destandardize(y2, y2_hat)
+                            
             train_metric_3d += loss_MPJPE(y2_hat, y2)/ len(training_set)
             
         train_metric_3d = torch.mean(train_metric_3d[:17]) #Please be carefull that here we will have zero for the first joint error so maybe it shoudl be the mean over 1:
@@ -265,7 +285,9 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
                                         gt_2d = y1_v, gt_3d = y2_v)
                 else :
                     loss_2d_v_ = loss_function(y1_hat_v, y1_v) 
-                    
+                
+                if standardize_3d: y2_v, y2_hat_v = destandardize(y2_v, y2_hat_v)
+                                 
                 metric_v_3d = loss_MPJPE(y2_hat_v, y2_v) 
             
                 if Triangle:
@@ -301,9 +323,8 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
     visualize(y1_v,y2_v,y1_hat_v,y2_hat_v,lift_2d_pred_v,proj_3d_pred_v,frame_v,run_name,"test", resume)
     
     #here
-    visualize_3d_heatmap(hm.cpu().detach(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_heatmap_gt.png")
-    breakpoint()
-    visualize_3d_heatmap(heatmap_hat.cpu().detach(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_heatmap_pred.png")
+    visualize_3d_heatmap(hm.cpu().detach(), name="./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_heatmap_gt.png")
+    visualize_3d_heatmap(heatmap_hat.cpu().detach(), name="./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"3d_heatmap_pred.png")
         
     #, 'scheduler': lr_schdlr.state_dict()
     
@@ -312,20 +333,21 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
     return model_2d, model_3d, model_lift
 
 
+
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("DEVICE:",device)
     batch_size = 32
-    n_epochs= 10
-    lr = 0.002
-    run_name = "june_19_hm"
+    n_epochs= 120
+    lr = 0.001
+    run_name = "june_19_"
     CtlCSave = False
     Resume = False
     Train = True
     
-    Triangle = 0
+    Triangle = 1
     Flip = 0
-    Project = 0
+    Project = 1
     
     if Train :
         print("___"+run_name+"___")
@@ -345,4 +367,6 @@ if __name__ == "__main__":
             wandb.finish() 
             
         print("___"+run_name+" DONE___")
+        
+
 

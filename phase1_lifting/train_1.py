@@ -31,7 +31,7 @@ def load_statisctics(file_name):
 def train(batch_size,n_epochs,lr,device,run_name,resume=False):
     
     #Creating Models
-    model_lift = LinearModel(i_dim=num_of_joints*input_dimension, o_dim=num_of_joints*output_dimension,p_dropout=0.5, linear_size=1024, BN=True).to(device)
+    model_lift = LinearModel(i_dim=num_of_joints*input_dimension, o_dim=num_of_joints*output_dimension,p_dropout=0.5, linear_size=512, BN=True).to(device)
     # model_lift = MyViT().to(device)
     loss_function = torch.nn.L1Loss()
     # loss_function = torch.nn.MSELoss(reduction = "mean")
@@ -45,8 +45,8 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
         batch_size = torch.load("./logs/models/"+run_name)["batch_size"]
         last_epoch = torch.load("./logs/models/"+run_name)["epoch"]
         
-    training_set = H36_dataset(subjectp=subjects[0:5], is_train = True, action="", split_rate=810) #new
-    test_set     = H36_dataset(subjectp=subjects[5:7] , is_train = False, action="", split_rate=640)
+    training_set = H36_dataset(subjectp=subjects[0:5], is_train = True, action="", split_rate=64) #new
+    test_set     = H36_dataset(subjectp=subjects[5:7] , is_train = False, action="", split_rate=64)
     
     train_loader = DataLoader( training_set, shuffle=True, batch_size=batch_size, num_workers= 2, prefetch_factor=2)
     test_loader = DataLoader(test_set, shuffle=False, batch_size=batch_size, num_workers=2, prefetch_factor=2)
@@ -192,7 +192,7 @@ if __name__ == "__main__":
     batch_size = 32
     n_epochs= 200
     lr = 0.002
-    run_name = "june_16_martinez_whole_17mean"
+    run_name = "june_16_martinez512_whole_17mean"
     CtlCSave = False
     Resume = False
     Train = True

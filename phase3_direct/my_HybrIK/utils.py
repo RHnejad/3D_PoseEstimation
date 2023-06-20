@@ -9,10 +9,10 @@ def visualize_3d_heatmap(heatmap , heatmap_pred = None , name="3d"):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     cmap = ListedColormap(sns.color_palette("flare", 64).as_hex())
-    for i in range(1,17):
+    for i in range(0,17):
         tmp = heatmap[0,i,:,:,:]
         
-        tmp[tmp[:,:,:]<0.1] = 0.0
+        tmp[tmp[:,:,:]<0.0001] = 0.0
         indices = torch.nonzero(tmp)
         x = indices[:, 0]
         y = indices[:, 1]
@@ -20,17 +20,16 @@ def visualize_3d_heatmap(heatmap , heatmap_pred = None , name="3d"):
     
         sc = ax.scatter(x, y, z, s=10, c=tmp[x,y,z]*10, marker='o',  cmap=cmap, alpha=0.5)
 
-    plt.legend(*sc.legend_elements(), bbox_to_anchor=(1.05, 1), loc=2)
-        
+    plt.legend(*sc.legend_elements(), bbox_to_anchor=(1.05, 1), loc=2)     
     ax.set_xlim(0, 64)
     ax.set_ylim(0, 64)
     ax.set_zlim(0, 64)
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
-
     # plt.show()
     plt.savefig(name)
+    plt.close()
 
 
 def visualize_3d(keypoints,keypoints2, name="3d"):

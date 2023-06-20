@@ -321,7 +321,6 @@ class MyViT(torch.nn.Module):
     self.n_heads = n_heads
     self.hidden_d = hidden_d
 
-
     # 1) Linear mapper 
     self.input_d = chw[2] #int(chw[0]*self.patch_size[0]*self.patch_size[1]) (4*4=16)
     self.linear_mapper = torch.nn.Linear(self.input_d, self.hidden_d)

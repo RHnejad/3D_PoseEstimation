@@ -133,11 +133,9 @@ class Model_3D(nn.Module):
         
         heatmaps = heatmaps.reshape((heatmaps.shape[0], self.num_joints, self.depth_dim, self.height_dim, self.width_dim))
         
-        
         hm_x = heatmaps.sum((2, 3))
         hm_y = heatmaps.sum((2, 4))
-        hm_z = heatmaps.sum((3, 4))
-        
+        hm_z = heatmaps.sum((3, 4))    
  
         if torch.cuda.is_available():
             hm_x = hm_x * torch.cuda.comm.broadcast(torch.arange(hm_x.shape[-1]).type(
@@ -158,13 +156,11 @@ class Model_3D(nn.Module):
 
         coord_x = (coord_x / float(self.width_dim) - 0.5)*2
         coord_y = (coord_y / float(self.height_dim) - 0.5)*2
-        coord_z = (coord_z / float(self.depth_dim) - 0.5)*2
+        coord_z = (coord_z / float(self.depth_dim) - 0.5)*2.5
         
         #  -0.5 ~ 0.5 0-1
         pred_uvd_jts_29 = torch.cat((coord_x, coord_y, coord_z), dim=2)
         
-        # pred_uvd_jts_29 = torch.cat((coord_x, -coord_z, -coord_y), dim=2) #HERE
-
         pred_uvd_jts_29_flat = pred_uvd_jts_29.reshape((batch_size, self.num_joints * 3)) 
                 
         return pred_uvd_jts_29_flat, retuned_heatmap

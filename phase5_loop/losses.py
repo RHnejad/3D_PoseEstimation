@@ -64,7 +64,7 @@ class TriangleLoss(torch.nn.Module):
 
 class TriangleLoss_sep(torch.nn.Module):
     def __init__(self, Project = False):
-        super(TriangleLoss, self).__init__()
+        super(TriangleLoss_sep, self).__init__()
         
         self.Project = Project
         

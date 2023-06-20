@@ -7,8 +7,8 @@ from utils import camera_parameters, qv_mult, flip_pose
 import cv2
 # import albumentations as A
 
-systm = "laptop"  #izar,vita17,laptop
-act = "Walking" #"Walking"
+systm = "vita17"  #izar,vita17,laptop
+act = "" #"Walking"
 load_imgs = True
 from_videos = False
 
@@ -73,8 +73,7 @@ class H36_dataset(Dataset):
                 
       
     def __len__(self):
-        return 1
-        # return len(self.dataset3d) #number of all the frames 
+        return len(self.dataset3d) #number of all the frames 
 
     def __getitem__(self, idx):
 
@@ -91,7 +90,10 @@ class H36_dataset(Dataset):
         keypoints_2d = self.dataset2d[idx].reshape(-1 ,2)
         keypoints_3d = self.dataset3d[idx]
         
-        heatmap_3d = self.keypoints_to_heatmap_3D(keypoints_3d)
+        if standardize_3d and (not Normalize): 
+            heatmap_3d = np.array([])
+        else:    
+            heatmap_3d = self.keypoints_to_heatmap_3D(keypoints_3d)
    
         #augmentation
         # if self.is_train:
@@ -127,18 +129,18 @@ class H36_dataset(Dataset):
 
     
     def xyz_to_uvw(self, kp): #here
-        # return np.array([-kp[1], -kp[2], kp[0]])
-        return np.array([kp[2], kp[1], kp[0]])
+        return np.array([-kp[1], -kp[2], kp[0]])
+        # return np.array([kp[2], kp[1], kp[0]])
     
     
-    def _keypoint_to_heatmap_3D(self, keypoint, sigma=1.75):
+    def _keypoint_to_heatmap_3D(self, keypoint, sigma=0.5): #sigma=1.75
         """
         Read the function name duh
         Args:
             keypoints (np.float32): Keypoints in 3D ranges from -1 to 1
             sigma (float, optional):Size of the Gaussian. Defaults to 1.75.
         """
-
+        
         assert np.min(keypoint) >= -1
         assert np.max(keypoint) <= 1
 
@@ -261,7 +263,10 @@ class H36_dataset(Dataset):
                     if Normalize:
                         # max_dataset, min_dataset = np.max(dataset, axis=0), np.min(dataset, axis=0)
                         # dataset[i] = np.divide(dataset[i]- min_train_3d, (max_train_3d-min_train_3d)) # map to 0 and 1
-                        pass
+
+                        dataset[i] = np.divide(dataset[i]- min_train_3d, (max_train_3d-min_train_3d)) # map to 0 and 1
+                        dataset[i] -= 0.5  # map to 0 and 1
+                        # pass
                     else:
                         dataset[i] = np.divide(dataset[i] - mean_train_3d, std_train_3d)
 
