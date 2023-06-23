@@ -17,7 +17,10 @@ from torch.utils.data import DataLoader, Dataset
 
 from tqdm import tqdm
 
-from utils import camera_parameters
+import sys
+sys.path.append("../phase3_direct/my_HybrIK/") #new
+from utils import camera_parameters #new
+# from utils import camera_parameters
 
 act = "Walk"
 run_num = "test"
@@ -384,16 +387,18 @@ def main():
     std_k = std_train_3d [list(range(17-num_of_joints,17)),:]
     
     #____________________________Defining model and training parameters___________________________
+    
+    model = MyViT().to(device)
     # model = MyViT((1,num_of_joints*num_cameras,2),n_blocks=2 , hidden_d=8, n_heads=1, out_d=(num_of_joints*output_dimension)).to(device)   #, n_patches=7, n_blocks=2, 
     # model = TransformerAE(2*num_cams, 3, 0.2).to(device)
     # model = AE(input_dimension, output_dimension, n_joints= num_of_joints).to(device)
-    model = LinearModel(i_dim=num_of_joints*input_dimension, o_dim=num_of_joints*output_dimension,p_dropout=0.5, linear_size=1024).to(device)
+    # model = LinearModel(i_dim=num_of_joints*input_dimension, o_dim=num_of_joints*output_dimension,p_dropout=0.5, linear_size=1024).to(device)
     model.apply(weight_init)
 
-    if load_imgs:
-        model_2 = My_CNN(output_dim=output_dimension)
+    # if load_imgs:
+        # model_2 = My_CNN(output_dim=output_dimension)
 
-    n_epochs=1
+    n_epochs=120
     lr = 0.001
 
     loss_function = torch.nn.MSELoss(reduction = "mean") #reduction = "sum"
@@ -434,10 +439,10 @@ def main():
                 frame = frame.float()
                 frame.to(device)
                 frame = frame.permute((0,3,2,1))
-                t_y = model_2(frame)
+                # t_y = model_2(frame)
 
-            print("HERE2")           
-            input()
+            # print("HERE2")           
+            # input()
 
             y_hat = model(x)
 

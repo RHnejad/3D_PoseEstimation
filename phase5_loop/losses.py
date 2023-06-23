@@ -107,7 +107,7 @@ class TriangleLoss_sep(torch.nn.Module):
         self.loss_lift.append(loss_lift.cpu().item())
         self.loss_domain_gap.append(domain_gap_loss.cpu().item())
         
-        return returned_loss
+        return returned_loss, loss_2d_, loss_3d_, loss_lift, loss_proj 
     
     def report_losses(self):
         print(sum(self.loss_2d)/len(self.loss_2d) , sum(self.loss_3d)/len(self.loss_3d) ,

@@ -43,7 +43,19 @@ class Model_3D(nn.Module):
         #________final_layer________
         self.final_layer = nn.Conv2d(
             self.deconv_dim[2], self.num_joints * self.depth_dim, kernel_size=1, stride=1, padding=0)
-    
+        
+        #new:
+        self.mlp = torch.nn.Sequential(
+        torch.nn.Linear(17*3, 128), # 17*4=68
+        torch.nn.BatchNorm1d(128),
+        torch.torch.nn.Tanh(), 
+        torch.nn.Dropout(0.5),
+        torch.nn.Linear(128, 64), # 17*4=68
+        torch.nn.BatchNorm1d(64),
+        torch.torch.nn.Tanh(), 
+        torch.nn.Dropout(0.5),
+        torch.nn.Linear(64, 17*3)#, #17*3=51
+    )
     
     def _make_deconv_layer(self):
         deconv_layers = []
@@ -119,7 +131,7 @@ class Model_3D(nn.Module):
         out = self.deconv_layers(x0)
         out = self.final_layer(out)
         
-        returned_heatmap = out.clone().detach()
+        # returned_heatmap = out.clone().detach()
          
         out = out.reshape((out.shape[0], self.num_joints, -1))
         out = self.norm_heatmap(self.norm_type, out)
@@ -162,6 +174,8 @@ class Model_3D(nn.Module):
         pred_uvd_jts_29 = torch.cat((coord_x, coord_y, coord_z), dim=2)
         
         pred_uvd_jts_29_flat = pred_uvd_jts_29.reshape((batch_size, self.num_joints * 3)) 
+        
+        pred_uvd_jts_29_flat = self.mlp(pred_uvd_jts_29_flat) #new ********************************
                 
         return pred_uvd_jts_29_flat, retuned_heatmap
     

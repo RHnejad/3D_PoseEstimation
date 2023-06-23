@@ -65,8 +65,8 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
         model_proj.load_state_dict(torch.load(pr_model_path)["model"])
         
     #___using a trained network for connections__
-    # vit_model_path = "/home/rh/codes/3D_PoseEstimation/phase1_lifting/logs/models/june_16_ViT_whole_17mean"
-    # model_lift.load_state_dict(torch.load(vit_model_path)["model"])
+    vit_model_path = "/home/rh/codes/3D_PoseEstimation/phase1_lifting/logs/models/june_16_ViT_whole_17mean"
+    model_lift.load_state_dict(torch.load(vit_model_path)["model"])
     
     
     if Triangle:
@@ -92,7 +92,7 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
         batch_size = torch.load("./logs/models/"+run_name)["batch_size"]
         last_epoch = torch.load("./logs/models/"+run_name)["epoch"]
         
-    training_set = H36_dataset(subjectp=subjects[0:5], is_train = True, action="Walking ", split_rate=64) #new
+    training_set = H36_dataset(subjectp=subjects[0:5], is_train = False, action="Walking", split_rate=64) #new
     test_set     = H36_dataset(subjectp=subjects[5:7] , is_train = False, action="Walking", split_rate=64)
     
     train_loader = DataLoader( training_set, shuffle=True, batch_size=batch_size, num_workers= 2, prefetch_factor=2)
@@ -117,8 +117,8 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
 
         model_2d.train()
         model_3d.train()
-        model_lift.train()
-        if Project: model_proj.train()
+        model_lift.eval()
+        if Project: model_proj.eval()
             
         for batch in tqdm(train_loader, desc=f"Epoch {epoch+1} in training", leave=True, position=0):
             optimizer_3d.zero_grad()
@@ -317,6 +317,9 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
     if not Triangle: 
         lift_2d_pred, proj_3d_pred, lift_2d_pred_v, proj_3d_pred_v  = [],[],[],[]
     if Triangle and (not Project): proj_3d_pred, proj_3d_pred_v = [],[]
+    
+    visualize(y1.clone(),y2.clone(),y1.clone(),y2,y1,torch.empty((17,2)),frame,run_name, "this", resume) 
+    breakpoint()
         
     plot_losses(epoch_losses,epoch_val_loss,epoch_metric,epoch_val_metric,"./logs/visualizations/"+(resume*"resumed_")+run_name)
     visualize(y1,y2,y1_hat,y2_hat,lift_2d_pred,proj_3d_pred,frame,run_name, "train", resume) 
@@ -338,9 +341,9 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("DEVICE:",device)
     batch_size = 32
-    n_epochs= 120
+    n_epochs= 1
     lr = 0.001
-    run_name = "june_19_"
+    run_name = "test"
     CtlCSave = False
     Resume = False
     Train = True

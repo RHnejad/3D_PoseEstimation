@@ -25,8 +25,7 @@ def visualize(y1,y2,y1_hat,y2_hat,lift_2d_pred,proj_3d_pred, frame,run_name, tes
         
     except:
         print("NO 2D to 3D LIFTING RESULTS TO PLOT") 
-        
-          
+     
     
     y1 = y1.cpu().detach().numpy().reshape(-1, num_of_joints,2)
     y1_hat = y1_hat.cpu().detach().numpy().reshape(-1, num_of_joints,2)

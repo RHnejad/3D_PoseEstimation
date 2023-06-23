@@ -31,10 +31,10 @@ def load_statisctics(file_name):
 def train(batch_size,n_epochs,lr,device,run_name,resume=False):
     
     #Creating Models
-    model_lift = LinearModel(i_dim=num_of_joints*input_dimension, o_dim=num_of_joints*output_dimension,p_dropout=0.5, linear_size=512, BN=True).to(device)
-    # model_lift = MyViT().to(device)
-    loss_function = torch.nn.L1Loss()
-    # loss_function = torch.nn.MSELoss(reduction = "mean")
+    # model_lift = LinearModel(i_dim=num_of_joints*input_dimension, o_dim=num_of_joints*output_dimension,p_dropout=0.5, linear_size=1024, BN=True).to(device)
+    model_lift = MyViT().to(device)
+    # loss_function = torch.nn.L1Loss()
+    loss_function = torch.nn.MSELoss(reduction = "mean")
         
     optimizer_lift = torch.optim.AdamW(model_lift.parameters(),lr = lr)
     
@@ -45,11 +45,11 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
         batch_size = torch.load("./logs/models/"+run_name)["batch_size"]
         last_epoch = torch.load("./logs/models/"+run_name)["epoch"]
         
-    training_set = H36_dataset(subjectp=subjects[0:5], is_train = True, action="", split_rate=64) #new
-    test_set     = H36_dataset(subjectp=subjects[5:7] , is_train = False, action="", split_rate=64)
+    training_set = H36_dataset(subjectp=subjects[0:5], is_train = True, action="Posing")#, split_rate=64) #new
+    test_set     = H36_dataset(subjectp=subjects[5:7] , is_train = False, action="Posing")#, split_rate=64)
     
-    train_loader = DataLoader( training_set, shuffle=True, batch_size=batch_size, num_workers= 2, prefetch_factor=2)
-    test_loader = DataLoader(test_set, shuffle=False, batch_size=batch_size, num_workers=2, prefetch_factor=2)
+    train_loader = DataLoader( training_set, shuffle=True, batch_size=batch_size, num_workers= 1, prefetch_factor=2)
+    test_loader = DataLoader(test_set, shuffle=False, batch_size=batch_size, num_workers=1, prefetch_factor=2)
    
     mean_train_3d, std_train_3d = load_statisctics("mean_train_3d"), load_statisctics("std_train_3d")
     max_train_3d, min_train_3d = load_statisctics("max_train_3d"), load_statisctics("min_train_3d")
@@ -163,8 +163,9 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
 
     y1 = y1.cpu().detach().numpy().reshape(-1, num_of_joints,2)
     y1_hat = np.zeros((1,17,2))#y1_hat.cpu().detach().numpy().reshape(-1, num_of_joints,2)
-    visualize_2d(y1[0].copy(),y1_hat[0].copy(),frame[0].copy(),   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"2d_"+str(testORtrain)+"_a.png")
-    visualize_2d(y1[-1].copy(),y1_hat[-1].copy(),frame[-1].copy(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"2d_"+str(testORtrain)+"_b.png")         
+    frame = frame.cpu().detach().numpy()
+    visualize_2d(y1[0].copy(),y1_hat[0].copy(),frame[0].copy(),   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"2d_"+str("train")+"_a.png")
+    visualize_2d(y1[-1].copy(),y1_hat[-1].copy(),frame[-1].copy(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"2d_"+str("train")+"_b.png")         
         
 
     plot_losses(epoch_losses,epoch_val_loss,epoch_metric,epoch_val_metric,"./logs/visualizations/"+(resume*"resumed_")+run_name)
@@ -178,8 +179,9 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
     
     y1_v = y1_v.cpu().detach().numpy().reshape(-1, num_of_joints,2)
     y1_hat_v = np.zeros((1,17,2))#y1_hat.cpu().detach().numpy().reshape(-1, num_of_joints,2)
-    visualize_2d(y1_v[0].copy(),y1_hat_v[0].copy(),frame_v[0].copy(),   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"2d_"+str(testORtrain)+"_a.png")
-    visualize_2d(y1_v[-1].copy(),y1_hat_v[-1].copy(),frame_v[-1].copy(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"2d_"+str(testORtrain)+"_b.png")         
+    frame_v = frame_v.cpu().detach().numpy()
+    visualize_2d(y1_v[0].copy(),y1_hat_v[0].copy(),frame_v[0].copy(),   "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"2d_"+str("test")+"_a.png")
+    visualize_2d(y1_v[-1].copy(),y1_hat_v[-1].copy(),frame_v[-1].copy(), "./logs/visualizations/"+str(run_name)+"/"+resume*"resumed_"+"2d_"+str("test")+"_b.png")         
         
     torch.save({'epoch' : epoch, 'batch_size':batch_size, 'model' : model_lift.state_dict(), 'optimizer': optimizer_lift.state_dict()  },"./logs/models/"+(resume*"resumed_")+run_name)
     
@@ -189,10 +191,10 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False):
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("DEVICE:",device)
-    batch_size = 32
-    n_epochs= 200
-    lr = 0.002
-    run_name = "june_16_martinez512_whole_17mean"
+    batch_size = 64
+    n_epochs= 150
+    lr = 0.0001
+    run_name = "june_23_vit_posingall_17_mse"
     CtlCSave = False
     Resume = False
     Train = True
