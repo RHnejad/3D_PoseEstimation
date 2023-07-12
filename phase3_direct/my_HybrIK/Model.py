@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 import torch.cuda.comm
+from utils import h36m_cameras_intrinsic_params
 
 from Resnet import ResNet
 from utils import visualize_3d,plot_heat_map
@@ -44,18 +45,23 @@ class Model_3D(nn.Module):
         self.final_layer = nn.Conv2d(
             self.deconv_dim[2], self.num_joints * self.depth_dim, kernel_size=1, stride=1, padding=0)
         
+        
+        #new:
+        self.cam_info_embedding_0 = torch.nn.Sequential(torch.nn.Linear(2, 16))
+        self.cam_info_embedding_1 = torch.nn.Sequential(torch.nn.Linear(2, 8))
+             
         #new:
         self.mlp = torch.nn.Sequential(
-        torch.nn.Linear(17*3, 128), # 17*4=68
-        torch.nn.BatchNorm1d(128),
-        torch.torch.nn.Tanh(), 
-        torch.nn.Dropout(0.5),
-        torch.nn.Linear(128, 64), # 17*4=68
-        torch.nn.BatchNorm1d(64),
-        torch.torch.nn.Tanh(), 
-        torch.nn.Dropout(0.5),
-        torch.nn.Linear(64, 17*3)#, #17*3=51
-    )
+            torch.nn.Linear(17*3+16, 128), # 17*4=68
+            torch.nn.BatchNorm1d(128),
+            torch.torch.nn.Tanh(), 
+            torch.nn.Dropout(0.5),
+            torch.nn.Linear(128, 64), # 17*4=68
+            torch.nn.BatchNorm1d(64),
+            torch.torch.nn.Tanh(), 
+            torch.nn.Dropout(0.5),
+            torch.nn.Linear(64, 17*3)#, #17*3=51
+        )
     
     def _make_deconv_layer(self):
         deconv_layers = []
@@ -123,10 +129,10 @@ class Model_3D(nn.Module):
     def uvw_to_xyz(self, kp):
         return torch.tensor([kp[2], -kp[0], -kp[1]])
             
-    def forward(self, x):
+    def forward(self, x, cam_inf):
     
         batch_size = x.shape[0]
-    
+        # breakpoint()
         x0 = self.preact(x)
         out = self.deconv_layers(x0)
         out = self.final_layer(out)
@@ -175,7 +181,12 @@ class Model_3D(nn.Module):
         
         pred_uvd_jts_29_flat = pred_uvd_jts_29.reshape((batch_size, self.num_joints * 3)) 
         
-        pred_uvd_jts_29_flat = self.mlp(pred_uvd_jts_29_flat) #new ********************************
+        # breakpoint()
+        # embeded_cam_info_0 = self.cam_info_embedding_0(cam_inf) #new ********************************
+        # # embeded_cam_info_1 = self.cam_info_embedding_1(cam_inf[:,2].flatten()) #new ********************************
+        # # embeded_cam_info = torch.cat((embeded_cam_info_0, embeded_cam_info_1), dim=1) #new ********************************
+        # mlp_input = torch.cat((pred_uvd_jts_29_flat, embeded_cam_info_0), dim=1) #new ********************************
+        # pred_uvd_jts_29_flat = self.mlp(mlp_input) #new ********************************
                 
         return pred_uvd_jts_29_flat, retuned_heatmap
     
@@ -188,7 +199,7 @@ if __name__ == "__main__":
     train_loader = DataLoader( training_set, shuffle=True, batch_size=1, num_workers= 1)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("DEVICE:",device)
-    x,y,f,_ = next(iter(train_loader))
+    x,y,f,_,_ = next(iter(train_loader))
     f = f.float().to(device)
     f= torch.permute(f, (0,3,1,2))
     model = Model_3D().to(device)

@@ -92,9 +92,9 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
         batch_size = torch.load("./logs/models/"+run_name)["batch_size"]
         last_epoch = torch.load("./logs/models/"+run_name)["epoch"]
         
-    training_set = H36_dataset(subjectp=subjects[0:5], is_train = False, action="Walking", split_rate=64) #new
-    test_set     = H36_dataset(subjectp=subjects[5:7] , is_train = False, action="Walking", split_rate=64)
-    
+    training_set = H36_dataset(subjectp=subjects[0:5], is_train = False, action="Walking ", split_rate=64) #new
+    test_set     = H36_dataset(subjectp=subjects[5:7] , is_train = False, action="Walking ", split_rate=64)
+        
     train_loader = DataLoader( training_set, shuffle=True, batch_size=batch_size, num_workers= 2, prefetch_factor=2)
     test_loader = DataLoader(test_set, shuffle=False, batch_size=batch_size, num_workers=2, prefetch_factor=2)
    
@@ -127,9 +127,10 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
             if Project:
                 optimizer_proj.zero_grad()
 
-            y1, y2, frame, _ , hm = batch
+            y1, y2, frame, cam_id , hm = batch
             current_batch_size = y1.shape[0]
             
+            cam_id=cam_id.float().to(device) 
             y1,y2=y1.float(),y2.float()
             y1, y2 = y1.to(device), y2.to(device) 
             frame = frame.float()
@@ -138,7 +139,7 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
             hm = hm.float().to(device)
                            
             y1_hat = model_2d(frame).reshape(current_batch_size,num_of_joints,2)   
-            y2_hat, heatmap_hat = model_3d(frame)
+            y2_hat, heatmap_hat = model_3d(frame, cam_id)
             y2_hat = y2_hat.reshape(current_batch_size,num_of_joints,3)
             
             if Triangle:
@@ -153,7 +154,7 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
                 frame = torch.flip(frame, (3,))
                 y1 = flip_pose(y1)
                 y1_hat = (flip_pose(model_2d(frame).reshape(current_batch_size,num_of_joints,2))+y1_hat)/2
-                y2_hat =  (flip_pose(model_3d(frame).reshape(current_batch_size,num_of_joints,3))+y2_hat)/2
+                y2_hat =  (flip_pose(model_3d(frame, cam_id).reshape(current_batch_size,num_of_joints,3))+y2_hat)/2
                 if Triangle:
                     lift_2d_pred = (flip_pose(model_lift(y1_hat).reshape(current_batch_size,num_of_joints,3))+lift_2d_pred)/2
                     lift_2d_gt = (flip_pose(model_lift(y1).reshape(current_batch_size,num_of_joints,3))+lift_2d_gt)/2
@@ -230,10 +231,11 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
             val_2d_loss = 0.0
             val_metric_3d = torch.zeros(num_of_joints).to(device)
             
-            for y1_v, y2_v, frame_v, _, hm_v  in test_loader:
+            for y1_v, y2_v, frame_v, cam_id_v, hm_v  in test_loader:
                 
                 current_batch_size = y1_v.shape[0]
                 
+                cam_id_v = cam_id_v.float().to(device)
                 y1_v,y2_v=y1_v.float(),y2_v.float()
                 y1_v, y2_v = y1_v.to(device), y2_v.to(device)
                 
@@ -242,7 +244,7 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
                 frame_v = torch.permute(frame_v, (0,3,1,2))
                 
                 y1_hat_v = model_2d(frame_v).reshape(current_batch_size,17,2)
-                y2_hat_v, heatmap2_hat_v = model_3d(frame_v)
+                y2_hat_v, heatmap2_hat_v = model_3d(frame_v, cam_id_v)
                 y2_hat_v = y2_hat_v.reshape(current_batch_size,17,3)
 
                 if Triangle:
@@ -259,7 +261,7 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
                     y1_v = flip_pose(y1_v)
                     
                     y1_hat_v = (flip_pose(model_2d(frame_v).reshape(current_batch_size,17,2)) + y1_hat_v) /2
-                    y2_hat_v = (flip_pose(model_3d(frame_v).reshape(current_batch_size,17,3)) + y2_hat_v) /2
+                    y2_hat_v = (flip_pose(model_3d(frame_v, cam_id_v).reshape(current_batch_size,17,3)) + y2_hat_v) /2
                     
                     if Triangle:
                         lift_2d_pred_v = (flip_pose(model_lift(y1_hat_v).reshape(current_batch_size,17,3)) + lift_2d_pred_v) /2
@@ -318,8 +320,8 @@ def train(batch_size,n_epochs,lr,device,run_name,resume=False, Triangle=True, Fl
         lift_2d_pred, proj_3d_pred, lift_2d_pred_v, proj_3d_pred_v  = [],[],[],[]
     if Triangle and (not Project): proj_3d_pred, proj_3d_pred_v = [],[]
     
-    visualize(y1.clone(),y2.clone(),y1.clone(),y2,y1,torch.empty((17,2)),frame,run_name, "this", resume) 
-    breakpoint()
+    # visualize(y1.clone(),y2.clone(),y1.clone(),y2,y1,torch.empty((17,2)),frame,run_name, "this", resume) 
+
         
     plot_losses(epoch_losses,epoch_val_loss,epoch_metric,epoch_val_metric,"./logs/visualizations/"+(resume*"resumed_")+run_name)
     visualize(y1,y2,y1_hat,y2_hat,lift_2d_pred,proj_3d_pred,frame,run_name, "train", resume) 
@@ -341,16 +343,16 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("DEVICE:",device)
     batch_size = 32
-    n_epochs= 1
-    lr = 0.001
-    run_name = "test"
+    n_epochs= 300
+    lr = 0.0005
+    run_name = "July12_croped_sep"
     CtlCSave = False
     Resume = False
     Train = True
     
-    Triangle = 1
+    Triangle = 0
     Flip = 0
-    Project = 1
+    Project = 0
     
     if Train :
         print("___"+run_name+"___")

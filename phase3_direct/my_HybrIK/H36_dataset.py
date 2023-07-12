@@ -3,7 +3,7 @@
 import math
 import numpy as np
 from torch.utils.data import Dataset
-from utils import camera_parameters, qv_mult, flip_pose
+from utils import camera_parameters, qv_mult, flip_pose, h36m_cameras_intrinsic_params
 import cv2
 # import albumentations as A
 
@@ -117,15 +117,27 @@ class H36_dataset(Dataset):
         #         self.dataset3d[idx] = flip_pose(self.dataset3d[idx])
                 
         
+        #testing cropping using the gt 2d as bounding box: 
+        bc = [min(keypoints_2d[:,0]), max(keypoints_2d[:,1])] 
+        br = [max(keypoints_2d[:,0]), max(keypoints_2d[:,1])] 
+        pc = [min(keypoints_2d[:,0]), min(keypoints_2d[:,1])] 
+        pr = [max(keypoints_2d[:,0]), min(keypoints_2d[:,1])] 
+        l_m = int (max(br[0] - bc[0], br[1] - pr[1])  * 1. *1000 )
+        frame = frame[ min(0,int(keypoints_2d[0,1]*1000-(l_m/2))) : max(1000,int(keypoints_2d[0,1]*1000+(l_m/2))) ,  min(0,int(keypoints_2d[0,0]*1000- (l_m/2))) : max(1000,int(keypoints_2d[0,0]*1000+ (l_m/2))) , :]
+        # breakpoint()
         #resising the image for Resnet
         frame = cv2.resize(frame, (256, 256))
+        # frame = cv2.resize(frame, (1024, 1024))
         frame = frame/256.0
+        
         
         for k in range(4):
             if self.cam_ids[k] in self.video_and_frame_paths[idx][0]:
                 r_cam_id = k
+                
+        # cam_inf = np.array([ [r_cam_id,r_cam_id ], h36m_cameras_intrinsic_params[r_cam_id]['center'],h36m_cameras_intrinsic_params[r_cam_id]['focal_length'] ])
             
-        return keypoints_2d, keypoints_3d, frame, r_cam_id, heatmap_3d
+        return keypoints_2d, keypoints_3d, frame, np.array(h36m_cameras_intrinsic_params[r_cam_id]['focal_length']), heatmap_3d
 
     
     def xyz_to_uvw(self, kp): #here
@@ -370,7 +382,16 @@ class H36_dataset(Dataset):
 if __name__ == "__main__" :
     
     training_set = H36_dataset(subjectp=subjects[0:5], is_train = True, action="Posing", split_rate=81) 
-    training_set.__getitem__(0)
+    keypoints_2d, keypoints_3d, frame, intnsc, hm3d = training_set.__getitem__(0)
+    
+    frame = cv2.resize(frame, dsize=(1000, 1000), interpolation=cv2.INTER_CUBIC)
+    import matplotlib.pyplot as plt
+    plt.figure()    
+    plt.imshow(frame)
+    plt.savefig("filename.png")
+    plt.close()
+    
+    breakpoint()
     
     all_in_one_dataset_2d, all_in_one_dataset_3d , video_and_frame_paths = H36_dataset.read_data(subjects=subjects[0:5])
     for i in range(all_in_one_dataset_3d.shape[0]):
